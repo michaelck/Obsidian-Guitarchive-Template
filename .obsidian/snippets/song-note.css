@@ -1,0 +1,7 @@
+/* hide the raw properties panel in reading view on song and artist notes —
+   the custom datacorejsx header/table replaces it. Applied per-note via the
+   cssclasses frontmatter property (written by the templates). */
+.song-note,
+.artist-note {
+    --metadata-display-reading: none;
+}

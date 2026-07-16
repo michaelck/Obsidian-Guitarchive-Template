@@ -1,0 +1,17 @@
+{
+  "user_scripts_folder": "Templates/Scripts",
+  "trigger_on_file_creation": true,
+  "enable_folder_templates": true,
+  "folder_templates": [
+    {
+      "folder": "Songs",
+      "template": "Templates/New Song.md"
+    }
+  ],
+  "enabled_templates_hotkeys": [
+    "Templates/Scripts/Enrich Song.md",
+    "Templates/Scripts/Enrich Artist.md",
+    "Templates/Scripts/Sync Artist Pages.md",
+    "Templates/Scripts/Adopt Song.md"
+  ]
+}

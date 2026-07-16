@@ -1,0 +1,20 @@
+{
+  "templater-obsidian:Templates/Scripts/Enrich Song.md": [
+    {
+      "modifiers": ["Mod", "Shift"],
+      "key": "E"
+    }
+  ],
+  "templater-obsidian:Templates/Scripts/Enrich Artist.md": [
+    {
+      "modifiers": ["Mod", "Shift"],
+      "key": "A"
+    }
+  ],
+  "templater-obsidian:Templates/Scripts/Adopt Song.md": [
+    {
+      "modifiers": ["Mod", "Shift"],
+      "key": "M"
+    }
+  ]
+}
