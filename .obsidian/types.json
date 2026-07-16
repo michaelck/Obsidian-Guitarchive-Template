@@ -1,0 +1,28 @@
+{
+  "types": {
+    "aliases": "aliases",
+    "cssclasses": "multitext",
+    "tags": "tags",
+    "Artist": "text",
+    "Song": "text",
+    "Album": "text",
+    "Tuning": "text",
+    "Capo": "text",
+    "Key": "text",
+    "Favorite": "checkbox",
+    "Cover": "text",
+    "CoverSource": "text",
+    "Genre": "multitext",
+    "Release Year": "text",
+    "Label": "text",
+    "Duration": "text",
+    "Listen": "multitext",
+    "Originally Tabbed By": "text",
+    "Tab Source": "text",
+    "Metadata Source": "text",
+    "Name": "text",
+    "MBID": "text",
+    "Wikipedia": "text",
+    "autoscroll-speed": "number"
+  }
+}

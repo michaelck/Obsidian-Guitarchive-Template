@@ -1,0 +1,15 @@
+.DS_Store
+
+# Obsidian per-user state — keep the shipped config, not session data
+# (hotkeys.json IS shipped: it pre-binds the Guitarchive commands)
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/app.json
+.obsidian/core-plugins.json
+.obsidian/graph.json
+.obsidian/cache
+
+# installed plugin code (users install these themselves; settings ship in-repo)
+.obsidian/plugins/*/main.js
+.obsidian/plugins/*/manifest.json
+.obsidian/plugins/*/styles.css
