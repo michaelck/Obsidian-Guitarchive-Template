@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guitarchive — a guitar tab archive for Obsidian</title>
+<meta name="description" content="An Obsidian starter vault for keeping your own guitar tab & chord archive — a personal songbook that organizes itself.">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎸</text></svg>">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="retro-stripe" aria-hidden="true"></div>
+  <div class="container header-inner">
+    <a class="wordmark" href="#">Guit<span>Archive</span></a>
+    <nav class="site-nav">
+      <a href="#features">Features</a>
+      <a href="#setup">Setup</a>
+      <a href="#credits">Credits</a>
+      <a class="btn btn-ghost" href="https://github.com/michaelck/Obsidian-Guitarchive-Template">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+  <!-- ============================================================ Hero -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow">An <a href="https://obsidian.md">Obsidian</a> starter vault</p>
+          <h1>Your guitar tabs,<br>organized like a library.</h1>
+          <p class="lede">
+            A personal songbook that organizes itself: plain-Markdown tab and
+            chord notes, a live searchable index, one-hotkey metadata from
+            MusicBrainz, and artist pages that build themselves.
+          </p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="https://github.com/michaelck/Obsidian-Guitarchive-Template/releases/latest">Download the vault (.zip)</a>
+            <a class="btn btn-ghost" href="https://github.com/michaelck/Obsidian-Guitarchive-Template/generate">Use the GitHub template</a>
+          </div>
+          <p class="cta-note">No GitHub account needed for the zip — unzip it and open the folder in Obsidian.</p>
+        </div>
+        <figure class="polaroid">
+          <img src="assets/guitar-room.jpg"
+               alt="A guitar on a stand beside an amp, bookshelves, and a music stand in warm window light">
+          <figcaption>Photo: <a href="https://unsplash.com/photos/musical-instruments-and-books-in-a-sunlit-home-interior-ChXKPHornJQ">Barney Goodman / Unsplash</a></figcaption>
+        </figure>
+      </div>
+
+      <!-- Screenshot slot. Drop the file at docs/assets/screenshots/dashboard.png
+           and this frame fills itself in — no HTML edit needed. Same pattern for
+           the two slots further down (song-note.png, artist-page.png). -->
+      <figure class="shot shot-hero">
+        <img src="assets/screenshots/dashboard.png"
+             alt="The Guitarchive dashboard: stat tiles, recently added songs, and the live index table"
+             loading="lazy"
+             onerror="this.closest('figure').classList.add('missing')">
+        <figcaption>The Guitarchive dashboard — stat tiles, recently added, and the live index.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ======================================================== Features -->
+  <section id="features" class="section">
+    <div class="container">
+      <h2>What's in the vault</h2>
+      <div class="card-grid">
+        <article class="card">
+          <div class="card-icon">▦</div>
+          <h3>Live index dashboard</h3>
+          <p>Stat tiles, recently-added songs, and a searchable, sortable
+          table of every song — text search across song, artist, album, and
+          genre, plus tuning, capo, and favorites filters, with cover-art
+          thumbnails and one-click favoriting.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">⟳</div>
+          <h3>One-hotkey enrichment</h3>
+          <p>Fill in Artist and Album, hit a hotkey, and pull release year,
+          genre, label, duration, cover art, and streaming links from
+          MusicBrainz and the Cover Art Archive.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">✎</div>
+          <h3>Artist pages that build themselves</h3>
+          <p>Every artist gets a page with song, album, and favorite counts
+          and a live table of their songs — created automatically when you
+          enrich, with an optional one-hotkey Wikipedia bio.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">♪</div>
+          <h3>Key detection</h3>
+          <p>A "detect key from chords" link in the song header analyzes
+          your chord sheet and writes the key to frontmatter — including
+          the sounding key when a capo is set.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">☎</div>
+          <h3>Works on your phone</h3>
+          <p>Every action is tappable, not hotkey-bound: in-note enrich and
+          key-detect links, and tables that collapse to a compact layout in
+          narrow panes — on mobile and in squeezed desktop splits alike.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">☰</div>
+          <h3>Plain Markdown all the way down</h3>
+          <p>Your archive is a folder of text files; every view is a query
+          over frontmatter. No database, no lock-in — grep it, sync it,
+          version it however you like.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== Screenshots -->
+  <section class="section section-alt">
+    <div class="container">
+      <h2>A song note and its artist page</h2>
+      <div class="shot-grid">
+        <figure class="shot">
+          <img src="assets/screenshots/song-note.png"
+               alt="A song note: metadata header with cover art above the tab"
+               loading="lazy"
+               onerror="this.closest('figure').classList.add('missing')">
+          <figcaption>A song note — the header renders cover art, metadata, and action links above your tab.</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="assets/screenshots/artist-page.png"
+               alt="An artist page: stat tiles, song table, and a Wikipedia bio"
+               loading="lazy"
+               onerror="this.closest('figure').classList.add('missing')">
+          <figcaption>An artist page — counts, the artist's songs, and a fetched Wikipedia bio.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================== Setup -->
+  <section id="setup" class="section">
+    <div class="container">
+      <h2>Up and running in three steps</h2>
+      <ol class="steps">
+        <li>
+          <h3>Get the vault</h3>
+          <p><a href="https://github.com/michaelck/Obsidian-Guitarchive-Template/releases/latest">Download
+          the latest release</a> and unzip it wherever you keep your notes —
+          no GitHub account required. Prefer git? <a href="https://github.com/michaelck/Obsidian-Guitarchive-Template/generate">Use
+          this template</a> on GitHub and clone yours, or clone the repo
+          directly.</p>
+        </li>
+        <li>
+          <h3>Open it in Obsidian</h3>
+          <p><em>Open folder as vault</em>, enable community plugins, and
+          install the four the vault is pre-configured for: Templater,
+          Datacore, Chord Sheets, and Vextab (the last two are optional).</p>
+        </li>
+        <li>
+          <h3>Add a song</h3>
+          <p>Create a note in <code>Songs/</code>, fill in Artist and Album,
+          add your tab, and hit <kbd>Cmd/Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd>
+          to enrich. The index and artist page take care of themselves.</p>
+        </li>
+      </ol>
+      <p class="fine-print">
+        The repo ships no song content — your own transcriptions of
+        copyrighted songs belong in your private vault, not a public fork.
+        Fetched cover art stays © its rights holders, with attribution
+        stored on every image.
+      </p>
+    </div>
+  </section>
+
+  <!-- ========================================================= Credits -->
+  <section id="credits" class="section section-alt">
+    <div class="container">
+      <h2>Built on other people's excellent work</h2>
+      <ul class="credit-list">
+        <li><a href="https://obsidian.md">Obsidian</a> — the platform it all lives in</li>
+        <li><a href="https://github.com/blacksmithgu/datacore">Datacore</a> by Michael Brenan — powers every live view here</li>
+        <li><a href="https://github.com/SilentVoid13/Templater">Templater</a> by SilentVoid13 — powers all the automation</li>
+        <li><a href="https://github.com/olvidalo/obsidian-chord-sheets">Chord Sheets</a> by Marcel Schaeben — chord rendering</li>
+        <li><a href="https://obsidian.md/plugins?id=vextab">Vextab</a> by Luis Guzman — melody-line notation</li>
+        <li><a href="https://musicbrainz.org">MusicBrainz</a> &amp; the <a href="https://coverartarchive.org">Cover Art Archive</a> — the open music metadata enrichment pulls from</li>
+        <li><a href="https://www.wikipedia.org">Wikipedia</a> &amp; Wikidata — artist bios (CC BY-SA)</li>
+      </ul>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="retro-stripe" aria-hidden="true"></div>
+  <div class="container footer-inner">
+    <p>MIT © 2026 <a href="https://github.com/michaelck">michaelck</a></p>
+    <p><a href="https://github.com/michaelck/Obsidian-Guitarchive-Template">Source on GitHub</a></p>
+  </div>
+</footer>
+
+</body>
+</html>
