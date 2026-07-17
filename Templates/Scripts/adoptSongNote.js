@@ -31,6 +31,7 @@ module.exports = async function adoptSongNote(tp) {
 		ensure("Artist", "");
 		ensure("Song", file.basename);
 		ensure("Album", "");
+		ensure("Version", "");
 		ensure("Tuning", "Standard");
 		ensure("Capo", "");
 		ensure("Key", "");

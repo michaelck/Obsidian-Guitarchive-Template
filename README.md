@@ -77,12 +77,20 @@ properties panel.
    the version you started from) and `Tab Source` (the URL) render as an
    attribution line in the song header — "originally" because your copy will
    likely evolve as you play it.
-3. **Enrich Song** hotkey → confirms the album, fills metadata + cover +
+3. Keeping **more than one take on the same song** — a different tuning, a
+   live arrangement, someone else's transcription? Give each its own note
+   (disambiguate the *filename*: `Hallelujah (Drop D).md`), keep `Song` as
+   the plain title, and describe the arrangement in the optional `Version`
+   property. It shows under the title in the header and as a muted suffix in
+   the index and artist tables, and the Songs stat still counts the song
+   once. Minor variations (an alternate voicing for one section) don't need
+   a second note — just add another section to the tab.
+4. **Enrich Song** hotkey → confirms the album, fills metadata + cover +
    streaming links, inserts the header, and creates the artist's page if new.
    **Tracking your own unpublished music?** Add `Metadata Source: none` to
    the song (and your artist page) — enrichment keeps doing the local work
    (header, artist page) but never queries MusicBrainz.
-4. On an artist page: **Enrich Artist** hotkey → pulls a Wikipedia bio into a
+5. On an artist page: **Enrich Artist** hotkey → pulls a Wikipedia bio into a
    `## Bio` section (with attribution; your `## Notes` are never touched).
 
 ## Mobile
