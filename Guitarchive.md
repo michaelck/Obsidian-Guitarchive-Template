@@ -86,8 +86,17 @@ return function View() {
             )
         );
         const tunings = new Set(pages.map(page => page.value("Tuning")).filter(v => v));
+        // a song with several Version notes (different interpretations of one
+        // track) still counts once — the tile counts songs, the table lists tabs
+        const distinctSongs = new Set(pages.map(page => {
+            const artists = dc.coerce.array(page.value("Artist") ?? [])
+                .map(artist => String(artist ?? "").trim().toLowerCase())
+                .sort()
+                .join("|");
+            return `${artists}::${String(page.value("Song") ?? page.$name).trim().toLowerCase()}`;
+        }));
         return {
-            songs: pages.length,
+            songs: distinctSongs.size,
             artists: artists.size,
             favorites: pages.filter(page => page.value("Favorite") === true).length,
             tunings: tunings.size,
@@ -123,6 +132,7 @@ return function View() {
         if (!query) return true;
         return [
             page.value("Song") ?? page.$name,
+            page.value("Version"),
             ...dc.coerce.array(page.value("Artist") ?? []),
             ...dc.coerce.array(page.value("Album") ?? []),
             ...dc.coerce.array(page.value("Genre") ?? []),
@@ -148,10 +158,13 @@ return function View() {
         [favoritesOnly, tuningFilter, capoFilter, search]
     );
 
-    // sort by Song, then by Artist (stable sort, so Artist wins as the primary key)
+    // sort by Version, then Song, then Artist (stable sort, so Artist wins as
+    // the primary key; Version just keeps multiple takes of one song in a
+    // deterministic order)
     const sorted = dc.useArray(
         exploded,
         array => array
+            .sort(row => String(row.page.value("Version") ?? ""))
             .sort(row => row.page.value("Song"))
             .sort(row => row.artist, direction),
         [direction]
@@ -197,7 +210,17 @@ return function View() {
         {
             id: "Song",
             value: row => row.page.value("Song") ?? row.page.$name, // fall back to the filename
-            render: (value, row) => <dc.Link link={row.page.$link.withDisplay(value)} /> // link to the file, showing the Song title
+            // link to the file, showing the Song title; a muted Version suffix
+            // tells multiple takes of one song apart
+            render: (value, row) => {
+                const version = row.page.value("Version");
+                return (
+                    <>
+                        <dc.Link link={row.page.$link.withDisplay(value)} />
+                        {version && <span style={{ fontSize: "0.85em", color: "var(--text-muted)" }}> · {version}</span>}
+                    </>
+                );
+            }
         },
         {
             id: "Favorite", // moved away from Artist so it doesn't read as part of the artist name
@@ -253,6 +276,7 @@ return function View() {
             render: (value, row) => {
                 const page = row.page;
                 const cover = page.value("Cover");
+                const version = page.value("Version");
                 const album = orDash(page.value("Album"));
                 const tuning = orDash(page.value("Tuning"));
                 const capo = orDash(page.value("Capo"));
@@ -274,6 +298,7 @@ return function View() {
                         )}
                         <div>
                             <dc.Link link={page.$link.withDisplay(value)} />
+                            {version && <span style={{ fontSize: "0.85em", color: "var(--text-muted)" }}> · {version}</span>}
                             <div style={{ fontSize: "0.85em", color: "var(--text-muted)" }}>{details}</div>
                         </div>
                     </div>
@@ -299,6 +324,8 @@ return function View() {
                         <span key={page.$path}>
                             {i > 0 ? " · " : ""}
                             <dc.Link link={page.$link.withDisplay(page.value("Song") ?? page.$name)} />
+                            {/* same Version disambiguation as the table, sized to blend into this muted line */}
+                            {page.value("Version") ? <span style={{ fontSize: "0.9em" }}> ({page.value("Version")})</span> : null}
                         </span>
                     ))}
                 </div>
