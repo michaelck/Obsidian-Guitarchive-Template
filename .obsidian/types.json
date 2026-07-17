@@ -6,6 +6,7 @@
     "Artist": "text",
     "Song": "text",
     "Album": "text",
+    "Version": "text",
     "Tuning": "text",
     "Capo": "text",
     "Key": "text",
