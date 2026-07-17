@@ -70,11 +70,8 @@ const DEFAULT_METADATA_SOURCE = "musicbrainz";
 // Downloads a cover image into COVERS_FOLDER and returns its vault path.
 // Extension comes from the response Content-Type; filename from artist+album.
 async function downloadCover(url, baseName) {
-	const res = await fetch(url, { headers: { "User-Agent": USER_AGENT } });
-	if (!res.ok) throw new Error(`cover download failed: ${res.status}`);
-	const data = await res.arrayBuffer();
-	const type = res.headers.get("content-type") ?? "";
-	const ext = type.includes("png") ? "png" : type.includes("gif") ? "gif" : type.includes("webp") ? "webp" : "jpg";
+	const { data, contentType } = await httpBinary(url);
+	const ext = contentType.includes("png") ? "png" : contentType.includes("gif") ? "gif" : contentType.includes("webp") ? "webp" : "jpg";
 
 	// create the folder chain one level at a time (createFolder isn't recursive)
 	let parent = "";
@@ -90,10 +87,72 @@ async function downloadCover(url, baseName) {
 	return path;
 }
 
-async function mbFetch(url) {
+// Another song of the same album — matched by Album MBID, so artist-name
+// spelling differences don't matter — that already has a local cover file.
+// Lets repeat songs from one album skip the Cover Art Archive entirely.
+function findExistingCover(rgid, currentPath) {
+	if (!rgid) return null;
+	for (const other of app.vault.getMarkdownFiles()) {
+		if (!other.path.startsWith("Songs/") || other.path === currentPath) continue;
+		const fm = app.metadataCache.getFileCache(other)?.frontmatter ?? {};
+		if (fm["Album MBID"] !== rgid) continue;
+		const cover = fm.Cover;
+		if (typeof cover === "string" && cover && !/^https?:/.test(cover) && app.vault.getAbstractFileByPath(cover)) {
+			return { cover, coverSource: fm.CoverSource ?? null };
+		}
+	}
+	return null;
+}
+
+// The deterministic covers filename may already exist from an earlier song on
+// the same album (downloadCover names files "<Artist> - <Album>.<ext>") —
+// covers notes enriched before Album MBID tracking existed.
+function coverFileOnDisk(baseName) {
+	const base = `${COVERS_FOLDER}/${baseName.replace(/[\\/:*?"<>|]/g, "-")}`;
+	for (const ext of ["jpg", "png", "webp", "gif"]) {
+		const path = `${base}.${ext}`;
+		if (app.vault.getAbstractFileByPath(path)) return { cover: path, coverSource: null };
+	}
+	return null;
+}
+
+// Obsidian's requestUrl does HTTP natively, bypassing the webview's CORS and
+// mixed-content rules. This matters on MOBILE: fetch() there is subject to
+// both, and the Cover Art Archive's redirect chain includes a hop with no
+// CORS header (desktop Obsidian doesn't enforce CORS, which masked this).
+// Falls back to fetch when require("obsidian") isn't available.
+const obsidianRequestUrl = (() => {
+	try {
+		return typeof require === "function" ? require("obsidian").requestUrl : null;
+	} catch {
+		return null;
+	}
+})();
+
+async function httpJson(url) {
+	if (obsidianRequestUrl) {
+		const res = await obsidianRequestUrl({ url, headers: { "User-Agent": USER_AGENT, "Accept": "application/json" }, throw: false });
+		if (res.status >= 400) throw new Error(`HTTP ${res.status} from ${url}`);
+		return res.json;
+	}
 	const res = await fetch(url, { headers: { "User-Agent": USER_AGENT, "Accept": "application/json" } });
-	if (!res.ok) throw new Error(`MusicBrainz error: ${res.status}`);
+	if (!res.ok) throw new Error(`HTTP ${res.status} from ${url}`);
 	return res.json();
+}
+
+async function httpBinary(url) {
+	if (obsidianRequestUrl) {
+		const res = await obsidianRequestUrl({ url, headers: { "User-Agent": USER_AGENT }, throw: false });
+		if (res.status >= 400) throw new Error(`HTTP ${res.status}`);
+		return { data: res.arrayBuffer, contentType: res.headers?.["content-type"] ?? "" };
+	}
+	const res = await fetch(url, { headers: { "User-Agent": USER_AGENT } });
+	if (!res.ok) throw new Error(`HTTP ${res.status}`);
+	return { data: await res.arrayBuffer(), contentType: res.headers.get("content-type") ?? "" };
+}
+
+async function mbFetch(url) {
+	return httpJson(url);
 }
 
 // Search release-groups (Artist + Album) — a small, precise search space (a
@@ -178,15 +237,13 @@ async function coverArtUrl(releaseId, releaseGroupId) {
 	for (const [type, id] of [["release", releaseId], ["release-group", releaseGroupId]]) {
 		if (!id) continue;
 		try {
-			const res = await fetch(`https://coverartarchive.org/${type}/${id}`, {
-				headers: { "User-Agent": USER_AGENT, "Accept": "application/json" },
-			});
-			if (!res.ok) continue;
-			const data = await res.json();
+			const data = await httpJson(`https://coverartarchive.org/${type}/${id}`);
 			const front = (data.images ?? []).find((img) => img.front);
 			if (front) {
 				return {
-					url: front.thumbnails?.large ?? front.image,
+					// CAA returns some image URLs as plain http:, which iOS
+					// refuses outright — the archive serves https fine
+					url: String(front.thumbnails?.large ?? front.image).replace(/^http:/, "https:"),
 					sourcePage: `https://musicbrainz.org/${type}/${id}/cover-art`,
 				};
 			}
@@ -263,6 +320,12 @@ const SONG_HEADER_BLOCK = [
 	'    const key = page.value("Key");',
 	"    const capoFret = parseInt(capo, 10) || 0;",
 	'    const [keyStatus, setKeyStatus] = dc.useState("");',
+	"",
+	"    // in-note trigger for enrichment — same Templater command the hotkey",
+	"    // fires, so it also works on mobile where there are no hotkeys. Hidden",
+	"    // when the command isn't registered (Templater missing/unconfigured).",
+	'    const ENRICH_COMMAND = "templater-obsidian:Templates/Scripts/Enrich Song.md";',
+	"    const canEnrich = !!dc.app.commands?.findCommand?.(ENRICH_COMMAND);",
 	"",
 	"    // --- key detection (self-contained; runs on demand from the header link) ---",
 	"    // Scores the note's chord progression against all 24 major/minor keys by",
@@ -410,12 +473,17 @@ const SONG_HEADER_BLOCK = [
 	'                            {tabSource ? <a href={tabSource}>{tabbedBy || "source"}</a> : tabbedBy}',
 	"                        </div>",
 	"                    )}",
-	"                    {!key && (",
-	'                        <div style={{ fontSize: "0.85em", color: "var(--text-muted)", marginTop: "0.2em" }}>',
-	'                            <a onClick={detectKey} style={{ cursor: "pointer" }}>♪ Detect key from chords</a>',
-	"                            {keyStatus ? <span> — {keyStatus}</span> : null}",
-	"                        </div>",
-	"                    )}",
+	'                    <div style={{ fontSize: "0.85em", color: "var(--text-muted)", marginTop: "0.2em", display: "flex", gap: "14px", flexWrap: "wrap" }}>',
+	"                        {canEnrich && (",
+	'                            <a onClick={() => dc.app.commands.executeCommandById(ENRICH_COMMAND)} style={{ cursor: "pointer" }}>⟳ Enrich metadata</a>',
+	"                        )}",
+	"                        {!key && (",
+	"                            <span>",
+	'                                <a onClick={detectKey} style={{ cursor: "pointer" }}>♪ Detect key from chords</a>',
+	"                                {keyStatus ? <span> — {keyStatus}</span> : null}",
+	"                            </span>",
+	"                        )}",
+	"                    </div>",
 	"                </div>",
 	"            </div>",
 	"            <hr/>",
@@ -503,7 +571,7 @@ async function resolveFromReleaseGroup(tp, artist, album, song) {
 	const year = release?.date?.slice(0, 4) ?? choice["first-release-date"]?.slice(0, 4) ?? "";
 	const cover = await coverArtUrl(release?.id, choice.id);
 
-	return { album: choice.title, year, genres, label, duration, cover, listen: [...listenByService.values()] };
+	return { album: choice.title, year, genres, label, duration, cover, listen: [...listenByService.values()], rgid: choice.id };
 }
 
 module.exports = async function enrichSongNote(tp) {
@@ -559,16 +627,29 @@ module.exports = async function enrichSongNote(tp) {
 		return;
 	}
 
-	const { album, year, genres, label, duration, cover, listen } = result;
+	const { album, year, genres, label, duration, cover, listen, rgid } = result;
 
-	// download the cover into the vault first (processFrontMatter's callback
-	// must stay synchronous); on failure fall back to storing the remote URL
+	// Cover resolution, cheapest first: (1) another song of the same album
+	// (Album MBID match) with a local cover; (2) the deterministic covers file
+	// already on disk; (3) download from the Cover Art Archive. Reuse also
+	// rescues the case where the CAA is unreachable but the album's art
+	// already lives in the vault. All of it happens before processFrontMatter,
+	// whose callback must stay synchronous.
 	let coverValue = cover?.url ?? null;
-	if (cover && DOWNLOAD_COVERS) {
-		try {
-			coverValue = await downloadCover(cover.url, `${existingArtist} - ${album ?? existingAlbum}`);
-		} catch (err) {
-			new Notice(`Cover download failed (${err.message}) — keeping the remote URL.`);
+	let coverSourceValue = cover?.sourcePage ?? null;
+	if (DOWNLOAD_COVERS) {
+		const existing =
+			findExistingCover(rgid, file.path) ??
+			coverFileOnDisk(`${existingArtist} - ${album ?? existingAlbum}`);
+		if (existing) {
+			coverValue = existing.cover;
+			coverSourceValue = existing.coverSource ?? coverSourceValue;
+		} else if (cover) {
+			try {
+				coverValue = await downloadCover(cover.url, `${existingArtist} - ${album ?? existingAlbum}`);
+			} catch (err) {
+				new Notice(`Cover download failed (${err.message}) — keeping the remote URL.`);
+			}
 		}
 	}
 
@@ -580,10 +661,9 @@ module.exports = async function enrichSongNote(tp) {
 		if (label) f.Label = label;
 		if (duration) f.Duration = duration;
 		if (listen.length > 0) f.Listen = listen;
-		if (cover) {
-			f.Cover = coverValue;
-			f.CoverSource = cover.sourcePage;
-		}
+		if (coverValue) f.Cover = coverValue;
+		if (coverSourceValue) f.CoverSource = coverSourceValue;
+		if (rgid) f["Album MBID"] = rgid; // enables cover reuse across songs of one album
 	});
 
 	await insertSongHeader(file);

@@ -5,3 +5,26 @@
 .artist-note {
     --metadata-display-reading: none;
 }
+
+/* opt the Guitarchive index out of the readable-line-length cap so the full
+   table gets the whole pane width; its only property (cssclasses) is noise,
+   so hide the properties panel in reading view here too */
+.wide-page {
+    --file-line-width: 100%;
+    --metadata-display-reading: none;
+}
+
+/* Mobile: long text property values (URLs in Tab Source, Cover, Listen…)
+   truncate to one line that's hard to tap into an edit position on. Let
+   them wrap so the whole value is visible and tappable. Targets internal
+   Obsidian classes — worst case a future rename just restores the default
+   truncation, nothing breaks. Desktop keeps the tidy single-line ellipsis. */
+.is-mobile .metadata-input-longtext.mod-truncate {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+.is-mobile .metadata-property .multi-select-pill-content {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    max-width: 100%;
+}

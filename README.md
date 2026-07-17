@@ -85,6 +85,18 @@ properties panel.
 4. On an artist page: **Enrich Artist** hotkey → pulls a Wikipedia bio into a
    `## Bio` section (with attribution; your `## Notes` are never touched).
 
+## Mobile
+
+Everything should work on Obsidian mobile — all four plugins support it, and 
+the important actions are tappable, not hotkey-bound: song headers have
+**⟳ Enrich metadata** and **♪ Detect key** links, artist pages have
+**⟳ Fetch Wikipedia bio**, and the index table collapses to a compact
+two-column layout on phones. Two tips:
+
+- Add **Adopt Song** to the mobile toolbar (**Settings → Toolbar**) — it's
+  the one command without an in-note link, since it targets freshly imported
+  notes that don't have a header yet.
+
 ## A note on copyright
 
 This repo ships no song content — nothing in it reproduces a copyrighted
