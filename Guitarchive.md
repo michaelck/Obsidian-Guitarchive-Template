@@ -1,3 +1,8 @@
+---
+cssclasses:
+  - wide-page
+---
+
 ```datacorejsx
 
 // returns "-" for empty/undefined/empty-array values; joins list values (e.g. multiple albums)
@@ -44,6 +49,21 @@ return function View() {
     const [tuningFilter, setTuningFilter] = dc.useState(""); // "" means no filter (All)
     const [capoFilter, setCapoFilter] = dc.useState("");     // "" means no filter (All)
     const [search, setSearch] = dc.useState("");             // live text search across song/artist/album/genre
+
+    // compact (two-column) layout whenever the pane is actually narrow — a
+    // desktop window squeezed by sidebars or a split needs it as much as a
+    // phone does, so measure the block's own container with a ResizeObserver
+    // instead of only checking dc.app.isMobile
+    const COMPACT_WIDTH = 750; // px — roughly where the six columns stop fitting
+    const [compact, setCompact] = dc.useState(dc.app.isMobile);
+    const measureRef = el => {
+        if (!el || el._measured) return; // callback refs re-fire on every render
+        el._measured = true;
+        const update = () => {
+            if (el.isConnected && el.clientWidth > 0) setCompact(el.clientWidth < COMPACT_WIDTH);
+        };
+        new ResizeObserver(update).observe(el); // also fires once on observe
+    };
 
     const pages = dc.useQuery('@page and path("Songs")'); // all song pages
     const artistPages = dc.useQuery('@page and path("Artists")'); // artist pages, for linking artist names
@@ -218,8 +238,53 @@ return function View() {
         { id: "Capo", value: row => orDash(row.page.value("Capo")), render: value => <>{value}</> }
     ];
 
+    // in a narrow pane (phones, but also squeezed desktop windows) the
+    // six-column table forces horizontal scrolling; collapse to two columns —
+    // a composite cell (song link over a muted detail line) plus the ♡ toggle
+    const COMPACT_COLUMNS = [
+        {
+            id: "Song",
+            title: ( // same clickable artist-sort toggle as the full-width header
+                <span onClick={() => setDirection(d => (d === "asc" ? "desc" : "asc"))} style={{ cursor: "pointer" }}>
+                    Songs by artist {direction === "asc" ? "▲" : "▼"}
+                </span>
+            ),
+            value: row => row.page.value("Song") ?? row.page.$name,
+            render: (value, row) => {
+                const page = row.page;
+                const cover = page.value("Cover");
+                const album = orDash(page.value("Album"));
+                const tuning = orDash(page.value("Tuning"));
+                const capo = orDash(page.value("Capo"));
+                // artist always; album when set; tuning only when non-Standard;
+                // capo when set — keeps the detail line short on small screens
+                const details = [
+                    row.artist,
+                    album !== "-" ? album : null,
+                    tuning !== "-" && tuning !== "Standard" ? tuning : null,
+                    capo !== "-" ? `capo ${capo}` : null,
+                ].filter(Boolean).join(" · ");
+                return (
+                    <div style={{ display: "grid", gridTemplateColumns: cover ? "16px 1fr" : "1fr", columnGap: "6px", alignItems: "start" }}>
+                        {cover && (
+                            <img
+                                src={coverSrc(cover)}
+                                style={{ width: "16px", height: "16px", objectFit: "cover", borderRadius: "3px", marginTop: "3px" }}
+                            />
+                        )}
+                        <div>
+                            <dc.Link link={page.$link.withDisplay(value)} />
+                            <div style={{ fontSize: "0.85em", color: "var(--text-muted)" }}>{details}</div>
+                        </div>
+                    </div>
+                );
+            }
+        },
+        COLUMNS.find(column => column.id === "Favorite"), // ♡ toggle, unchanged
+    ];
+
     return (
-        <>
+        <div ref={measureRef}>
             {/* headline stats for the whole vault (ignores the filters below) */}
             <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginBottom: "12px" }}>
                 <StatTile value={stats.songs} label="Songs" />
@@ -257,8 +322,12 @@ return function View() {
                 <dc.VanillaSelect options={tuningOptions} value={tuningFilter} onValueChange={setTuningFilter} />
                 <dc.VanillaSelect options={capoOptions} value={capoFilter} onValueChange={setCapoFilter} />
             </div>
-            <dc.Table columns={COLUMNS} rows={grouped} /> {/* grouped rows render with A/B/C section headers */}
-        </>
+            {/* overflow-x keeps any residual overflow scrollable inside the
+                note instead of clipping at the pane edge */}
+            <div style={{ overflowX: "auto" }}>
+                <dc.Table columns={compact ? COMPACT_COLUMNS : COLUMNS} rows={grouped} /> {/* grouped rows render with A/B/C section headers */}
+            </div>
+        </div>
     );
 }
 

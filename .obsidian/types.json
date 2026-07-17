@@ -23,6 +23,7 @@
     "Name": "text",
     "MBID": "text",
     "Wikipedia": "text",
-    "autoscroll-speed": "number"
+    "autoscroll-speed": "number",
+    "Album MBID": "text"
   }
 }

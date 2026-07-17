@@ -26,7 +26,22 @@
 const USER_AGENT = "ObsidianTabVaultEnricher/1.0 (personal vault script)";
 const ARTISTS_FOLDER = "Artists";
 
+// Obsidian's requestUrl does HTTP natively, bypassing the webview's CORS and
+// mixed-content rules (needed on mobile); falls back to fetch elsewhere.
+const obsidianRequestUrl = (() => {
+	try {
+		return typeof require === "function" ? require("obsidian").requestUrl : null;
+	} catch {
+		return null;
+	}
+})();
+
 async function jsonFetch(url) {
+	if (obsidianRequestUrl) {
+		const res = await obsidianRequestUrl({ url, headers: { "User-Agent": USER_AGENT, "Accept": "application/json" }, throw: false });
+		if (res.status >= 400) throw new Error(`${res.status} from ${new URL(url).hostname}`);
+		return res.json;
+	}
 	const res = await fetch(url, { headers: { "User-Agent": USER_AGENT, "Accept": "application/json" } });
 	if (!res.ok) throw new Error(`${res.status} from ${new URL(url).hostname}`);
 	return res.json();
