@@ -207,14 +207,33 @@ async function getRecordingUrlRels(recordingId) {
 // than by relationship type, since the types ("streaming", "free streaming",
 // "purchase for download") are applied inconsistently across entries.
 const STREAMING_SERVICES = [
-	{ pattern: /open\.spotify\.com/, name: "Spotify" },
-	{ pattern: /(?:music|itunes)\.apple\.com/, name: "Apple Music" },
-	{ pattern: /bandcamp\.com/, name: "Bandcamp" },
-	{ pattern: /youtube\.com|youtu\.be/, name: "YouTube" },
-	{ pattern: /soundcloud\.com/, name: "SoundCloud" },
-	{ pattern: /tidal\.com/, name: "Tidal" },
-	{ pattern: /deezer\.com/, name: "Deezer" },
+	{ domains: ["open.spotify.com"], name: "Spotify" },
+	{ domains: ["music.apple.com", "itunes.apple.com"], name: "Apple Music" },
+	{ domains: ["bandcamp.com"], name: "Bandcamp" },
+	{ domains: ["youtube.com", "youtu.be"], name: "YouTube" },
+	{ domains: ["soundcloud.com"], name: "SoundCloud" },
+	{ domains: ["tidal.com"], name: "Tidal" },
+	{ domains: ["deezer.com"], name: "Deezer" },
 ];
+
+// Matches a URL against the whitelist by exact hostname (or subdomain), https
+// only. MusicBrainz URL relationships are community-submitted, so a URL that
+// merely CONTAINS a service's domain somewhere in the string must not pass —
+// it would render in the header as a trusted-looking "Spotify" etc. link.
+function matchStreamingService(url) {
+	let parsed;
+	try {
+		parsed = new URL(url);
+	} catch {
+		return null;
+	}
+	if (parsed.protocol !== "https:") return null;
+	return (
+		STREAMING_SERVICES.find((s) =>
+			s.domains.some((domain) => parsed.hostname === domain || parsed.hostname.endsWith(`.${domain}`))
+		) ?? null
+	);
+}
 
 // Map of service name -> URL for whichever whitelisted services appear in a
 // relations array. First hit per service wins.
@@ -223,7 +242,7 @@ function streamingLinks(relations) {
 	for (const rel of relations ?? []) {
 		const url = rel.url?.resource;
 		if (!url) continue;
-		const service = STREAMING_SERVICES.find((s) => s.pattern.test(url));
+		const service = matchStreamingService(url);
 		if (service && !found.has(service.name)) found.set(service.name, url);
 	}
 	return found;
@@ -416,16 +435,20 @@ const SONG_HEADER_BLOCK = [
 	"        return names[(PC[m[1]] + capoFret) % 12] + m[2];",
 	"    })();",
 	"",
-	"    // human label for a streaming URL, derived from its domain",
-	"    const serviceName = url =>",
-	'        url.includes("spotify") ? "Spotify" :',
-	'        url.includes("apple") ? "Apple Music" :',
-	'        url.includes("bandcamp") ? "Bandcamp" :',
-	'        url.includes("youtu") ? "YouTube" :',
-	'        url.includes("soundcloud") ? "SoundCloud" :',
-	'        url.includes("tidal") ? "Tidal" :',
-	'        url.includes("deezer") ? "Deezer" :',
-	"        hostnameOf(url);",
+	"    // human label for a streaming URL, matched by hostname — not substring,",
+	"    // so a URL that merely contains a service's name isn't labeled as it",
+	"    const serviceName = url => {",
+	"        const host = hostnameOf(url); // already strips www.",
+	'        const at = domain => host === domain || host.endsWith("." + domain);',
+	'        return at("open.spotify.com") ? "Spotify" :',
+	'            at("music.apple.com") || at("itunes.apple.com") ? "Apple Music" :',
+	'            at("bandcamp.com") ? "Bandcamp" :',
+	'            at("youtube.com") || at("youtu.be") ? "YouTube" :',
+	'            at("soundcloud.com") ? "SoundCloud" :',
+	'            at("tidal.com") ? "Tidal" :',
+	'            at("deezer.com") ? "Deezer" :',
+	"            host;",
+	"    };",
 	"",
 	"    // only render rows for fields that actually have a value",
 	"    const fields = [",
