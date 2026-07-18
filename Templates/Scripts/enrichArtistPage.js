@@ -139,11 +139,17 @@ module.exports = async function enrichArtistPage(tp) {
 		return;
 	}
 
+	// The extract is plain text, but plain text can still contain a literal
+	// code fence — which Datacore would EXECUTE if it claimed to be
+	// datacorejsx. Neutralize backtick/tilde fence runs before inserting
+	// remote content into the note body.
+	const extract = summary.extract.replace(/[`~]{3,}/g, "'''");
+
 	const pageUrl = summary.content_urls?.desktop?.page ?? `https://en.wikipedia.org/wiki/${title.replace(/ /g, "_")}`;
 	const bioSection = [
 		"## Bio",
 		"",
-		summary.extract,
+		extract,
 		"",
 		`*Source: [Wikipedia](${pageUrl}), text under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).*`,
 		"",
