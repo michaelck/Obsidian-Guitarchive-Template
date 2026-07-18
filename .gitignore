@@ -1,5 +1,18 @@
 .DS_Store
 
+# Claude Code per-machine state (CLAUDE.md and .claude/ are tracked)
+.claude/settings.local.json
+
+# vault content stays out of the public repo — only the .gitkeep
+# placeholders are tracked (if you're using this template to version your
+# own private vault, delete this block)
+Songs/*
+!Songs/.gitkeep
+Artists/*
+!Artists/.gitkeep
+Attachments/Covers/*
+!Attachments/Covers/.gitkeep
+
 # Obsidian per-user state — keep the shipped config, not session data
 # (hotkeys.json IS shipped: it pre-binds the Guitarchive commands)
 .obsidian/workspace.json
