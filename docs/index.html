@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guitarchive — a guitar tab archive for Obsidian</title>
+<meta name="description" content="An Obsidian starter vault for keeping your own guitar tab & chord archive — a personal songbook that organizes itself.">
+<script>
+  // theme is a site choice, not a system pref: dark unless the visitor
+  // toggled light. Runs before the stylesheet so there's no flash.
+  document.documentElement.dataset.theme = localStorage.getItem("guitarchive-theme") || "dark";
+</script>
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎸</text></svg>">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="retro-stripe" aria-hidden="true"></div>
+  <div class="container header-inner">
+    <a class="wordmark" href="#">Guit<span>Archive</span></a>
+    <nav class="site-nav">
+      <a href="#features">Features</a>
+      <a href="#setup">Setup</a>
+      <a href="#credits">Credits</a>
+      <a class="btn btn-ghost" href="https://github.com/michaelck/Obsidian-Guitarchive-Template"><svg class="gh-mark" viewBox="0 0 16 16" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch to light theme">
+        <svg class="icon-sun" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+  <!-- ============================================================ Hero -->
+  <section class="hero">
+    <div class="container">
+      <p class="eyebrow">An <a class="obsidian-link" href="https://obsidian.md">Obsidian</a> starter vault</p>
+      <div class="hero-row">
+        <div class="hero-copy">
+          <h1>Curate a collection of chords, tablature, and more</h1>
+          <p class="lede">Your personal songbook that organizes itself:</p>
+          <ul class="lede-list">
+            <li>Gather tab and chord notes as Markdown</li>
+            <li>Browse a searchable index</li>
+            <li>Semi-automated metadata gathering</li>
+            <li>Artist pages that build themselves as songs are added</li>
+          </ul>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="https://github.com/michaelck/Obsidian-Guitarchive-Template/releases/latest">Download the vault (.zip)</a>
+            <a class="btn btn-ghost" href="https://github.com/michaelck/Obsidian-Guitarchive-Template/generate"><svg class="gh-mark" viewBox="0 0 16 16" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>Use the GitHub template</a>
+          </div>
+          <p class="cta-note">No GitHub account needed for the zip. Download. Unzip. Open the folder as a new Obsidian vault.</p>
+        </div>
+        <!-- Stylized sketch of the dashboard, not a screenshot — see the
+             "app sketches" section of style.css. -->
+        <figure class="sketch-fig">
+          <div class="sketch sk-index" aria-hidden="true">
+            <div class="sk-bar"><i></i><i></i><i></i></div>
+            <div class="sk-body">
+              <div class="sk-tiles">
+                <div class="sk-tile"><b>12</b><span>Songs</span></div>
+                <div class="sk-tile"><b>7</b><span>Artists</span></div>
+                <div class="sk-tile"><b>6</b><span>Favorites</span></div>
+                <div class="sk-tile"><b>1</b><span>Tunings</span></div>
+              </div>
+              <div class="sk-recent"><b>Recently added:</b><i class="sk-link" style="width:12%"></i><i class="sk-link" style="width:9%"></i><i class="sk-link" style="width:11%"></i><i class="sk-link" style="width:8%"></i></div>
+              <div class="sk-filters">
+                <span class="sk-search"></span>
+                <span class="sk-pill"><span class="sk-knob"></span>Favorites only</span>
+                <span class="sk-pill">All Tunings ⌄</span>
+                <span class="sk-pill">All Capo Positions ⌄</span>
+              </div>
+              <div>
+                <div class="sk-thead"><span>Artist ▲</span><span>Song</span><span class="sk-heart off">♡</span><span>Album</span><span>Tuning</span><span>Capo</span></div>
+                <div class="sk-group">A</div>
+                <div class="sk-row"><i class="sk-link" style="width:70%"></i><i class="sk-link" style="width:78%"></i><span class="sk-heart">♥</span><span class="sk-album"><span class="sk-thumb"></span><i style="width:55%"></i></span><span class="sk-cell">Standard</span><span class="sk-cell">–</span></div>
+                <div class="sk-group">F</div>
+                <div class="sk-row"><i class="sk-link" style="width:60%"></i><i class="sk-link" style="width:66%"></i><span class="sk-heart off">♥</span><span class="sk-album"><span class="sk-thumb"></span><i style="width:62%"></i></span><span class="sk-cell">Standard</span><span class="sk-cell">–</span></div>
+                <div class="sk-row"><span></span><i class="sk-link" style="width:42%"></i><span class="sk-heart">♥</span><span class="sk-album"><span class="sk-thumb"></span><i style="width:62%"></i></span><span class="sk-cell">Standard</span><span class="sk-cell">4</span></div>
+                <div class="sk-group">M</div>
+                <div class="sk-row"><i class="sk-link" style="width:76%"></i><i class="sk-link" style="width:58%"></i><span class="sk-heart off">♥</span><span class="sk-album"><span class="sk-thumb"></span><i style="width:70%"></i></span><span class="sk-cell">Standard</span><span class="sk-cell">–</span></div>
+                <div class="sk-row"><i class="sk-link" style="width:64%"></i><i class="sk-link" style="width:50%"></i><span class="sk-heart">♥</span><span class="sk-album"><span class="sk-thumb"></span><i style="width:56%"></i></span><span class="sk-cell">Standard</span><span class="sk-cell">4</span></div>
+                <div class="sk-row"><span></span><i class="sk-link" style="width:68%"></i><span class="sk-heart off">♥</span><span class="sk-album"><span class="sk-thumb"></span><i style="width:48%"></i></span><span class="sk-cell">Standard</span><span class="sk-cell">7</span></div>
+                <div class="sk-group">S</div>
+                <div class="sk-row"><i class="sk-link" style="width:55%"></i><i class="sk-link" style="width:72%"></i><span class="sk-heart">♥</span><span class="sk-album"><span class="sk-thumb"></span><i style="width:60%"></i></span><span class="sk-cell">Drop D</span><span class="sk-cell">–</span></div>
+              </div>
+            </div>
+          </div>
+          <figcaption><strong>The archive index</strong> — search/filter songs, toggle favorites, and view basic inventory analytics.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================== Features -->
+  <section id="features" class="section">
+    <div class="container">
+      <h2>What's in the vault?</h2>
+      <div class="card-grid">
+        <article class="card">
+          <div class="card-icon">▦</div>
+          <h3>Live index dashboard</h3>
+          <p>A searchable, filterable index of every song in your archive —
+          always up to date, no upkeep.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">⟳</div>
+          <h3>Semi-automated metadata</h3>
+          <p>Fill in the title, album, and artist; the vault gathers the rest.
+          Release year, genre, label, duration, cover art, and streaming
+          links from MusicBrainz and the Cover Art Archive.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">✎</div>
+          <h3>Artist pages that build themselves</h3>
+          <p>Every artist in your archive automatically gets a page with song, album, and favorite counts
+          and a live table of their songs. Customize them as you'd like.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">♪</div>
+          <h3>Key detection <span class="badge">In progress</span></h3>
+          <p>A "detect key from chords" link in the song header analyzes
+          your chord sheet and writes the key to frontmatter — including
+          the sounding key when a capo is set.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">☰</div>
+          <h3>Plain Markdown all the way down</h3>
+          <p>Your archive is a folder of text files. No database, no lock-in.
+             Version it however you like. Add whatever you want (videos, links, notes, etc.)</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== Screenshots -->
+  <section class="section section-alt">
+    <div class="container">
+      <h2>A song note and its artist page</h2>
+      <div class="sketch-grid">
+        <figure class="sketch-fig">
+          <div class="sketch sk-note" aria-hidden="true">
+            <div class="sk-bar"><i></i><i></i><i></i></div>
+            <div class="sk-body">
+              <div class="sk-note-head">
+                <div class="sk-cover">♪</div>
+                <div class="sk-note-meta">
+                  <div class="sk-songtitle"><span class="sk-heart">♥</span><i class="sk-title" style="width:46%"></i></div>
+                  <div class="sk-field"><b>Artist:</b><i style="width:38%"></i></div>
+                  <div class="sk-field"><b>Album:</b><i style="width:46%"></i></div>
+                  <div class="sk-field"><b>Genre:</b><i style="width:26%"></i></div>
+                  <div class="sk-field"><b>Duration:</b><span class="sk-cell">2:47</span></div>
+                  <div class="sk-field"><b>Tuning:</b><span class="sk-cell">Standard</span></div>
+                  <div class="sk-actions"><span>⟳ Enrich metadata</span><span>♪ Detect key from chords</span></div>
+                </div>
+              </div>
+              <hr class="sk-rule">
+              <div class="sk-chords">
+                <div class="sk-diagram"><span class="sk-chordname">G#m</span><div class="sk-fret"><b style="left:39%;top:33%"></b><b style="left:58%;top:33%"></b></div></div>
+                <div class="sk-diagram"><span class="sk-chordname">F#</span><div class="sk-fret"><b style="left:20%;top:60%"></b><b style="left:39%;top:60%"></b><b style="left:58%;top:35%"></b></div></div>
+                <div class="sk-diagram"><span class="sk-chordname">B</span><div class="sk-fret"><b style="left:39%;top:60%"></b><b style="left:58%;top:60%"></b><b style="left:78%;top:60%"></b></div></div>
+                <div class="sk-diagram"><span class="sk-chordname">E</span><div class="sk-fret"><b style="left:20%;top:58%"></b><b style="left:39%;top:58%"></b><b style="left:58%;top:33%"></b></div></div>
+              </div>
+              <div class="sk-lyrics">
+                <div class="sk-chordline">G#m        F#    B</div>
+                <i style="width:66%"></i>
+                <div class="sk-chordline">    F#   G#m</div>
+                <i style="width:40%"></i>
+              </div>
+            </div>
+          </div>
+          <figcaption><strong>A song note</strong> -  cover art, metadata, and action links in a header above your chords and tab.</figcaption>
+        </figure>
+        <figure class="sketch-fig">
+          <div class="sketch sk-artist" aria-hidden="true">
+            <div class="sk-bar"><i></i><i></i><i></i></div>
+            <div class="sk-body">
+              <div class="sk-tiles">
+                <div class="sk-tile"><b>4</b><span>Songs</span></div>
+                <div class="sk-tile"><b>2</b><span>Albums</span></div>
+                <div class="sk-tile"><b>2</b><span>Favorites</span></div>
+              </div>
+              <div class="sk-actions"><span>⟳ Fetch Wikipedia bio</span></div>
+              <div>
+                <div class="sk-thead"><span>Song</span><span class="sk-heart off">♡</span><span>Album</span><span>Tuning</span><span>Capo</span></div>
+                <div class="sk-row"><i class="sk-link" style="width:62%"></i><span class="sk-heart">♥</span><span class="sk-album"><span class="sk-thumb"></span><i style="width:66%"></i></span><span class="sk-cell">Standard</span><span class="sk-cell">4</span></div>
+                <div class="sk-row"><span class="sk-songcell"><i class="sk-link" style="width:74%"></i><i class="sk-sub"></i></span><span class="sk-heart off">♥</span><span class="sk-album"><span class="sk-thumb"></span><i style="width:66%"></i></span><span class="sk-cell">Standard</span><span class="sk-cell">–</span></div>
+                <div class="sk-row"><i class="sk-link" style="width:48%"></i><span class="sk-heart off">♥</span><span class="sk-album"><span class="sk-thumb"></span><i style="width:58%"></i></span><span class="sk-cell">Standard</span><span class="sk-cell">–</span></div>
+                <div class="sk-row"><i class="sk-link" style="width:56%"></i><span class="sk-heart">♥</span><span class="sk-album"><span class="sk-thumb"></span><i style="width:58%"></i></span><span class="sk-cell">Standard</span><span class="sk-cell">–</span></div>
+              </div>
+              <div class="sk-bio">
+                <b>Bio</b>
+                <div class="sk-text">
+                  <i style="width:100%"></i>
+                  <i style="width:94%"></i>
+                  <i style="width:58%"></i>
+                </div>
+                <span class="sk-cell">Source: Wikipedia · text under CC BY-SA 4.0</span>
+              </div>
+            </div>
+          </div>
+          <figcaption><strong>An artist page</strong> — index of the artist's songs in your archive, basic analytics data, and a fetched Wikipedia bio.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================== Setup -->
+  <section id="setup" class="section">
+    <div class="container">
+      <h2>Up and running in three steps</h2>
+      <ol class="steps">
+        <li>
+          <h3>Get the vault</h3>
+          <p><a href="https://github.com/michaelck/Obsidian-Guitarchive-Template/releases/latest">Download
+          the latest release</a>, unzip it wherever you keep your notes.
+          Prefer GitHub? <a href="https://github.com/michaelck/Obsidian-Guitarchive-Template/generate">Use
+          this template</a> on GitHub and clone yours, or clone the repo
+          directly.</p>
+        </li>
+        <li>
+          <h3>Open it in Obsidian</h3>
+          <p><em>Open folder as vault</em>, enable community plugins, 
+          and install the four the vault is pre-configured for: <a href="https://github.com/SilentVoid13/Templater">Templater</a>,
+          <a href="https://github.com/blacksmithgu/datacore">Datacore</a>, <a href="https://github.com/olvidalo/obsidian-chord-sheets">Chord Sheets</a>,
+          and <a href="https://obsidian.md/plugins?id=vextab">Vextab</a>.</p>
+        </li>
+        <li>
+          <h3>Add a song</h3>
+          <p>Create a note in <code>Songs/</code>. Use the song title to name the file, fill in Artist
+          and Album metadata, add your tab or chords to the body, and run <em>Enrich Song</em> to gather the rest of
+          the metadata. The index and artist page take care of themselves.</p>
+        </li>
+      </ol>
+      <p class="fine-print">
+        The repo ships no song content — your own transcriptions of
+        copyrighted songs belong in your private vault, not a public fork.
+        Fetched cover art stays © its rights holders, with attribution
+        stored on every image.
+      </p>
+    </div>
+  </section>
+
+  <!-- ========================================================= Credits -->
+  <section id="credits" class="section section-alt">
+    <div class="container">
+      <h2>Built on other people's excellent work</h2>
+      <ul class="credit-list">
+        <li><a class="obsidian-link" href="https://obsidian.md">Obsidian</a> — the platform it all lives in</li>
+        <li><a href="https://github.com/blacksmithgu/datacore">Datacore</a> by Michael Brenan — powers every live view here</li>
+        <li><a href="https://github.com/SilentVoid13/Templater">Templater</a> by SilentVoid13 — powers all the automation</li>
+        <li><a href="https://github.com/olvidalo/obsidian-chord-sheets">Chord Sheets</a> by Marcel Schaeben — chord rendering</li>
+        <li><a href="https://obsidian.md/plugins?id=vextab">Vextab</a> by Luis Guzman — melody-line notation</li>
+        <li><a href="https://musicbrainz.org">MusicBrainz</a> &amp; the <a href="https://coverartarchive.org">Cover Art Archive</a> — the open music metadata enrichment pulls from</li>
+        <li><a href="https://www.wikipedia.org">Wikipedia</a> &amp; Wikidata — artist bios (CC BY-SA)</li>
+      </ul>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="retro-stripe" aria-hidden="true"></div>
+  <div class="container footer-inner">
+    <p>MIT © 2026 <a href="https://github.com/michaelck">michaelck</a></p>
+    <p><a href="https://github.com/michaelck/Obsidian-Guitarchive-Template">Source on GitHub</a></p>
+  </div>
+</footer>
+
+<script>
+  const themeToggle = document.querySelector(".theme-toggle");
+  const paintToggle = () => {
+    const dark = document.documentElement.dataset.theme !== "light";
+    themeToggle.setAttribute("aria-label", dark ? "Switch to light theme" : "Switch to dark theme");
+  };
+  themeToggle.addEventListener("click", () => {
+    const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem("guitarchive-theme", next);
+    paintToggle();
+  });
+  paintToggle();
+</script>
+
+</body>
+</html>
