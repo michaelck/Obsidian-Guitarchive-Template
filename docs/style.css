@@ -101,6 +101,31 @@ code, kbd {
 a { color: var(--primary); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
+::selection { background: var(--primary); color: var(--primary-foreground); }
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* keyboard users get a way past the nav; invisible until focused */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 1rem;
+  z-index: 20;
+  padding: 0.5rem 1rem;
+  border-radius: 0 0 var(--radius) var(--radius);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 600;
+}
+.skip-link:focus-visible { top: 0; text-decoration: none; }
+
+/* anchored sections land below the sticky header, not under it */
+#features, #setup, #credits { scroll-margin-top: 4.25rem; }
+
 /* links to Obsidian itself wear the brand purple instead of terracotta */
 a.obsidian-link { color: var(--obsidian); }
 
@@ -116,6 +141,7 @@ h1 {
   line-height: 1.12;
   letter-spacing: -0.02em;
   font-weight: 700;
+  text-wrap: balance;
 }
 
 h2 {
@@ -124,6 +150,7 @@ h2 {
   letter-spacing: -0.01em;
   font-weight: 700;
   margin-bottom: 1.75rem;
+  text-wrap: balance;
 }
 
 h3 { font-size: 1.05rem; margin-bottom: 0.35rem; }
@@ -168,6 +195,12 @@ h3 { font-size: 1.05rem; margin-bottom: 0.35rem; }
   font-size: 0.925rem;
 }
 .site-nav > a:not(.btn):hover { color: var(--foreground); text-decoration: none; }
+
+/* on phone widths the section links go; the GitHub button and theme toggle
+   stay, and the sections are one flick of a scroll away anyway */
+@media (max-width: 560px) {
+  .site-nav > a:not(.btn) { display: none; }
+}
 
 /* light/dark toggle — the site defaults to dark regardless of OS setting */
 .theme-toggle {
@@ -331,7 +364,7 @@ h3 { font-size: 1.05rem; margin-bottom: 0.35rem; }
   padding: 7px 9px;
   line-height: 1.25;
 }
-.sk-tile b { display: block; font-size: 0.95rem; }
+.sk-tile b { display: block; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
 .sk-tile span { font-size: 0.62rem; color: oklch(0.55 0.02 345); }
 
 .sk-search {
@@ -541,6 +574,9 @@ h3 { font-size: 1.05rem; margin-bottom: 0.35rem; }
   white-space: nowrap;
 }
 
+/* icon chips share the toggle's SVG grammar: 24px grid, 1.8px round-capped
+   strokes, currentColor — text glyphs (▦, ⟳, ♪…) sat at whatever optical
+   size the symbol font picked and never matched each other */
 .card-icon {
   display: grid;
   place-items: center;
@@ -551,8 +587,8 @@ h3 { font-size: 1.05rem; margin-bottom: 0.35rem; }
   background: var(--muted);
   border: 1px solid var(--border);
   color: var(--primary);
-  font-size: 1.1rem;
 }
+.card-icon svg { display: block; }
 
 /* setup steps */
 
