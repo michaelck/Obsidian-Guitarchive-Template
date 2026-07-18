@@ -699,3 +699,18 @@ module.exports = async function enrichSongNote(tp) {
 
 	new Notice(`Updated "${file.basename}" from MusicBrainz`);
 };
+
+// Exposed for the offline test suite (tools/tests/, plain Node, no Obsidian).
+// Templater only ever calls the exported function, so extra properties on it
+// are inert inside Obsidian.
+module.exports.__test__ = {
+	matchStreamingService,
+	streamingLinks,
+	formatDuration,
+	findTrack,
+	coverArtUrl,
+	mbSearchReleaseGroups,
+	resolveFromReleaseGroup,
+	insertSongHeader,
+	SONG_HEADER_BLOCK,
+};

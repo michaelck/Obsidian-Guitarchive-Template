@@ -1,0 +1,156 @@
+const { test } = require("node:test");
+const assert = require("node:assert/strict");
+const { installGlobals, installFetch } = require("./obsidian-fakes");
+
+const script = require("../../Templates/Scripts/enrichSongNote.js");
+const { matchStreamingService, streamingLinks, formatDuration, findTrack, resolveFromReleaseGroup, insertSongHeader, SONG_HEADER_BLOCK } = script.__test__;
+
+// --- matchStreamingService: domain whitelist, https-only, no substring leaks ---
+
+test("matchStreamingService accepts whitelisted hosts and their subdomains", () => {
+	assert.equal(matchStreamingService("https://open.spotify.com/track/x").name, "Spotify");
+	assert.equal(matchStreamingService("https://www.youtube.com/watch?v=x").name, "YouTube");
+	assert.equal(matchStreamingService("https://elliottsmith.bandcamp.com/album/x").name, "Bandcamp");
+});
+
+test("matchStreamingService rejects http, lookalike hosts, and junk", () => {
+	assert.equal(matchStreamingService("http://open.spotify.com/track/x"), null);
+	// domain appearing in the path or as a prefix of another host must not pass
+	assert.equal(matchStreamingService("https://evil.example/open.spotify.com"), null);
+	assert.equal(matchStreamingService("https://notopen.spotify.com.evil.example/x"), null);
+	assert.equal(matchStreamingService("not a url"), null);
+	assert.equal(matchStreamingService(""), null);
+});
+
+test("streamingLinks keeps the first URL per service and skips rel entries without URLs", () => {
+	const links = streamingLinks([
+		{ url: { resource: "https://open.spotify.com/track/first" } },
+		{ url: { resource: "https://open.spotify.com/track/second" } },
+		{ url: {} },
+		{},
+		{ url: { resource: "https://tidal.com/track/x" } },
+	]);
+	assert.deepEqual([...links.entries()], [
+		["Spotify", "https://open.spotify.com/track/first"],
+		["Tidal", "https://tidal.com/track/x"],
+	]);
+	assert.equal(streamingLinks(null).size, 0);
+});
+
+// --- formatDuration / findTrack ---
+
+test("formatDuration formats ms as m:ss with zero-padding, null on missing", () => {
+	assert.equal(formatDuration(141000), "2:21");
+	assert.equal(formatDuration(125400), "2:05");
+	assert.equal(formatDuration(59600), "1:00"); // rounds up across the minute
+	assert.equal(formatDuration(0), null);
+	assert.equal(formatDuration(undefined), null);
+});
+
+test("findTrack prefers exact title match, tolerates '(Remastered)' via substring", () => {
+	const release = {
+		media: [
+			{ tracks: [{ title: "Angeles (Remastered)" }, { title: "Angeles" }] },
+			{ tracks: [{ title: "Between the Bars (Remastered)" }] },
+		],
+	};
+	assert.equal(findTrack(release, "Angeles").title, "Angeles");
+	assert.equal(findTrack(release, "between the bars").title, "Between the Bars (Remastered)");
+	assert.equal(findTrack(release, "Say Yes"), undefined);
+	assert.equal(findTrack({}, "Angeles"), undefined);
+});
+
+// --- resolveFromReleaseGroup: the full offline pipeline against synthetic
+// --- MusicBrainz responses (stubbed fetch — the script's requestUrl path is
+// --- unavailable under Node, so it falls back to global fetch)
+
+function mbRoutes() {
+	return [
+		["/ws/2/release-group?query=", {
+			"release-groups": [{ id: "rg1", title: "Either/Or", "first-release-date": "1997-02-25" }],
+		}],
+		["/ws/2/release-group/rg1", {
+			releases: [
+				{ id: "rel-late", date: "2001-05-01" },
+				{ id: "rel-early", date: "1997" },
+			],
+			// slice(0,3) happens BEFORE the junk filter, so the junk entry
+			// costs a slot: expect exactly ["indie rock", "rock"]
+			genres: [
+				{ name: "indie rock", count: 5 },
+				{ name: "junk:entry", count: 9 },
+				{ name: "rock", count: 3 },
+				{ name: "folk", count: 2 },
+			],
+			relations: [
+				{ url: { resource: "https://open.spotify.com/album/from-rg" } },
+				{ url: { resource: "https://www.youtube.com/playlist?list=rg" } },
+			],
+		}],
+		["/ws/2/release/rel-early", {
+			"label-info": [{ label: { name: "Kill Rock Stars" } }],
+			media: [{ tracks: [
+				{ title: "Between the Bars", length: 141000, recording: { id: "rec1" } },
+				{ title: "Ballad of Big Nothing", length: 165000, recording: { id: "rec2" } },
+			] }],
+			relations: [
+				{ url: { resource: "https://open.spotify.com/album/from-release" } },
+				{ url: { resource: "https://elliottsmith.bandcamp.com/album/either-or" } },
+			],
+		}],
+		["/ws/2/recording/rec1", {
+			relations: [{ url: { resource: "https://open.spotify.com/track/from-recording" } }],
+		}],
+		["coverartarchive.org/release/rel-early", {
+			images: [{ front: true, image: "http://caa.example/front.jpg", thumbnails: { large: "http://caa.example/large.jpg" } }],
+		}],
+	];
+}
+
+test("resolveFromReleaseGroup: earliest release, curated genres only, listen precedence, https cover", async () => {
+	installGlobals();
+	installFetch(mbRoutes());
+	const tp = { system: { suggester: () => assert.fail("suggester must not run for a single result") } };
+
+	const result = await resolveFromReleaseGroup(tp, "Smith, Elliott", "Either/Or", "Between the Bars");
+
+	assert.equal(result.album, "Either/Or");
+	assert.equal(result.rgid, "rg1");
+	assert.equal(result.year, "1997"); // from the EARLIEST release, not 2001
+	assert.equal(result.label, "Kill Rock Stars"); // proves rel-early was the release fetched
+	assert.equal(result.duration, "2:21");
+	assert.deepEqual(result.genres, ["indie rock", "rock"]);
+	// most song-specific source wins per service: recording > release > release-group
+	assert.deepEqual(result.listen, [
+		"https://open.spotify.com/track/from-recording",
+		"https://elliottsmith.bandcamp.com/album/either-or",
+		"https://www.youtube.com/playlist?list=rg",
+	]);
+	// CAA plain-http URLs are force-upgraded for iOS
+	assert.equal(result.cover.url, "https://caa.example/large.jpg");
+	assert.equal(result.cover.sourcePage, "https://musicbrainz.org/release/rel-early/cover-art");
+});
+
+test("resolveFromReleaseGroup reports the last query tried when nothing matches", async () => {
+	installGlobals();
+	installFetch([["/ws/2/release-group?query=", { "release-groups": [] }]]);
+	const result = await resolveFromReleaseGroup({}, "Nobody", "Nothing", "Nope");
+	assert.equal(result.notFoundQuery, "Nobody Nothing");
+});
+
+// --- insertSongHeader ---
+
+test("insertSongHeader inserts the block after frontmatter and strips old cover embeds", async () => {
+	const path = "Songs/Test.md";
+	const app = installGlobals({ files: [path], contents: { [path]: "---\nSong: Test\n---\n![Cover](http://x)\n\ntab body\n" } });
+	await insertSongHeader({ path });
+	assert.equal(app.contents[path], "---\nSong: Test\n---\n\n" + SONG_HEADER_BLOCK + "\ntab body\n");
+});
+
+test("insertSongHeader is idempotent — a body that already has the block is left alone", async () => {
+	const path = "Songs/Test.md";
+	const before = "---\nSong: Test\n---\n\n" + SONG_HEADER_BLOCK + "\ntab body\n";
+	const app = installGlobals({ files: [path], contents: { [path]: before } });
+	await insertSongHeader({ path });
+	assert.equal(app.contents[path], before);
+});

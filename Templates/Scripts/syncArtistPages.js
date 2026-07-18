@@ -277,3 +277,9 @@ module.exports = async function syncArtistPages(tp, { quiet = false } = {}) {
 		new Notice(`Artist pages already up to date (${artists.size} artists).`);
 	}
 };
+
+// Exposed for the offline test suite (tools/tests/) — inert inside Obsidian.
+module.exports.__test__ = {
+	artistPageContent,
+	ARTIST_PAGE_BLOCK,
+};

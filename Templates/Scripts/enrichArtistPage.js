@@ -164,3 +164,10 @@ module.exports = async function enrichArtistPage(tp) {
 
 	new Notice(`Added Wikipedia bio to "${file.basename}".`);
 };
+
+// Exposed for the offline test suite (tools/tests/) — inert inside Obsidian.
+module.exports.__test__ = {
+	mbSearchArtists,
+	wikipediaTitle,
+	upsertBioSection,
+};
