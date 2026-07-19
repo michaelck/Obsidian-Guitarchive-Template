@@ -46,6 +46,8 @@ return function View() {
     const album = dc.coerce.array(page.value("Album") ?? []).join(", ");
     const genre = dc.coerce.array(page.value("Genre") ?? []).join(", ");
     const year = page.value("Release Year");
+    const albumType = page.value("Album Type");
+    const track = page.value("Track");
     const label = page.value("Label");
     const duration = page.value("Duration");
     const tuning = page.value("Tuning");
@@ -168,10 +170,18 @@ return function View() {
             host;
     };
 
+    // Album Type and Track fold into the Album row instead of getting their
+    // own lines — three rows for one album's worth of facts read as noise
+    const albumLine = [
+        year ? `${album} (${year})` : album,
+        albumType,
+        track ? `Track ${track}` : null,
+    ].filter(Boolean).join(" · ");
+
     // only render rows for fields that actually have a value
     const fields = [
         ["Artist", artist],
-        ["Album", year ? `${album} (${year})` : album],
+        ["Album", albumLine],
         ["Label", label],
         ["Genre", genre],
         ["Duration", duration],

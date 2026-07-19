@@ -25,7 +25,8 @@
 //     does NOT touch frontmatter — it just leaves things as they are.
 //   - When Artist + Album ARE both set: searches MusicBrainz release-groups
 //     (small, precise search space), lets you pick if there's more than one
-//     match, then pulls Release Year, Genre, Label, Duration, cover art, and
+//     match, then pulls Release Year, Album Type, Genre, Label, Duration,
+//     Track (this song's position on the release, "4 of 11"), cover art, and
 //     streaming links (Spotify/Bandcamp/etc. from MusicBrainz URL
 //     relationships, stored as a Listen list property — coverage is patchy,
 //     so it's often empty).
@@ -301,9 +302,13 @@ function formatDuration(ms) {
 }
 
 // Finds this song's own track within a release's tracklist (exact match first,
-// then substring, to tolerate "Song (Remastered)" style listings).
+// then substring, to tolerate "Song (Remastered)" style listings). Each track
+// carries its medium's track-count alongside its own position, so callers can
+// build a "4 of 11" label without a second lookup.
 function findTrack(releaseData, songTitle) {
-	const allTracks = (releaseData.media ?? []).flatMap((m) => m.tracks ?? []);
+	const allTracks = (releaseData.media ?? []).flatMap((m) =>
+		(m.tracks ?? []).map((t) => ({ ...t, mediumTrackCount: m["track-count"] ?? (m.tracks ?? []).length }))
+	);
 	const lower = songTitle.toLowerCase();
 	return (
 		allTracks.find((t) => t.title?.toLowerCase() === lower) ??
@@ -346,6 +351,8 @@ const SONG_HEADER_BLOCK = [
 	'    const album = dc.coerce.array(page.value("Album") ?? []).join(", ");',
 	'    const genre = dc.coerce.array(page.value("Genre") ?? []).join(", ");',
 	'    const year = page.value("Release Year");',
+	'    const albumType = page.value("Album Type");',
+	'    const track = page.value("Track");',
 	'    const label = page.value("Label");',
 	'    const duration = page.value("Duration");',
 	'    const tuning = page.value("Tuning");',
@@ -468,10 +475,18 @@ const SONG_HEADER_BLOCK = [
 	"            host;",
 	"    };",
 	"",
+	"    // Album Type and Track fold into the Album row instead of getting their",
+	"    // own lines — three rows for one album's worth of facts read as noise",
+	"    const albumLine = [",
+	"        year ? `${album} (${year})` : album,",
+	"        albumType,",
+	"        track ? `Track ${track}` : null,",
+	'    ].filter(Boolean).join(" · ");',
+	"",
 	"    // only render rows for fields that actually have a value",
 	"    const fields = [",
 	'        ["Artist", artist],',
-	'        ["Album", year ? `${album} (${year})` : album],',
+	'        ["Album", albumLine],',
 	'        ["Label", label],',
 	'        ["Genre", genre],',
 	'        ["Duration", duration],',
@@ -598,11 +613,13 @@ async function resolveFromReleaseGroup(tp, artist, album, song) {
 
 	let label = null;
 	let duration = null;
+	let trackPosition = null;
 	if (release) {
 		const releaseData = await getReleaseTracklist(release.id);
 		label = releaseData["label-info"]?.[0]?.label?.name ?? null;
 		const track = findTrack(releaseData, song);
 		duration = formatDuration(track?.length);
+		if (track?.position && track?.mediumTrackCount) trackPosition = `${track.position} of ${track.mediumTrackCount}`;
 		if (track?.recording?.id) {
 			try {
 				const recordingData = await getRecordingUrlRels(track.recording.id);
@@ -617,8 +634,12 @@ async function resolveFromReleaseGroup(tp, artist, album, song) {
 
 	const year = release?.date?.slice(0, 4) ?? choice["first-release-date"]?.slice(0, 4) ?? "";
 	const cover = await coverArtUrl(release?.id, choice.id);
+	// release-group primary type (Album/EP/Single/Live/Compilation); secondary
+	// types (e.g. "Compilation" alongside "Album") are deliberately ignored —
+	// primary type alone is enough for album-vs-EP grouping
+	const albumType = rgDetails["primary-type"] ?? null;
 
-	return { album: choice.title, year, genres, label, duration, cover, listen: [...listenByService.values()], rgid: choice.id };
+	return { album: choice.title, year, genres, label, duration, track: trackPosition, albumType, cover, listen: [...listenByService.values()], rgid: choice.id };
 }
 
 module.exports = async function enrichSongNote(tp) {
@@ -674,7 +695,7 @@ module.exports = async function enrichSongNote(tp) {
 		return;
 	}
 
-	const { album, year, genres, label, duration, cover, listen, rgid } = result;
+	const { album, year, genres, label, duration, track, albumType, cover, listen, rgid } = result;
 
 	// Cover resolution, cheapest first: (1) another song of the same album
 	// (Album MBID match) with a local cover; (2) the deterministic covers file
@@ -707,6 +728,8 @@ module.exports = async function enrichSongNote(tp) {
 		if (genres.length > 0) f.Genre = genres;
 		if (label) f.Label = label;
 		if (duration) f.Duration = duration;
+		if (track) f.Track = track;
+		if (albumType) f["Album Type"] = albumType;
 		if (listen.length > 0) f.Listen = listen;
 		if (coverValue) f.Cover = coverValue;
 		if (coverSourceValue) f.CoverSource = coverSourceValue;

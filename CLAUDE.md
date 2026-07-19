@@ -98,7 +98,12 @@ default "Standard"), `Capo` (Text, default "None"), `Favorite` (Checkbox),
 `Attachments/Covers/<Artist> - <Album>.jpg`; Obsidian has no native Image
 property type), `CoverSource`
 (Text — link to the MusicBrainz cover-art page, since Cover Art Archive has no
-machine-readable license field), `Genre` (List), `Release Year` (Text), `Label`
+machine-readable license field), `Genre` (List), `Release Year` (Text), `Album
+Type` (Text — the release-group's MusicBrainz primary type: Album, EP,
+Single, Live, Compilation; secondary types are ignored), `Track` (Text — this
+song's position on the release, e.g. "4 of 11"; both written by enrichment,
+already present in the release-group/tracklist responses fetched for Genre
+and Duration, so no extra HTTP), `Label`
 (Text), `Duration` (Text, "m:ss"), `Listen` (List of streaming URLs —
 Spotify/Bandcamp/etc., written by enrichment when MusicBrainz has them),
 `Originally Tabbed By` (Text — who transcribed the tab this note started
@@ -494,6 +499,17 @@ real dependency: `tools/package.json` pulls in `sucrase` as a devDependency,
 scoped to `tools/` (its own `node_modules`, gitignored; `package-lock.json`
 is tracked) precisely because `tools/` is already export-ignored — the
 release zip never sees it.
+
+`key-detection.test.js` runs golden cases against the header block's
+self-contained key-detection scorer (`PC` through `bestKey` — no `dc`/`page`
+references at all), sliced out of `SONG_HEADER_BLOCK` by anchor string
+rather than executing the whole `View()` function, so it needs no stubbed
+Datacore API. Also run through sucrase, with `disableESTransforms: true` so
+`??`/`?.` stay native instead of downleveling to sucrase's helper functions
+(which aren't defined in the eval'd scope). Covers the ≥60% chord-line rule,
+a couple of known progressions resolving to their known key, and the
+sheet-accidental spelling rule (a sharp-heavy progression spells `D#m`, a
+flat-heavy one spells `Ebm` — same pitch class, different tonic spelling).
 
 ## Roadmap and changelog
 

@@ -28,11 +28,16 @@ Song-header pass (one `SONG_HEADER_BLOCK` migration):
 - [ ] "More from this album" row — other vault songs sharing this note's
       `Album MBID`, queried live in the block. No network; row hides when
       `Album MBID` is empty or nothing else matches.
-- [ ] `Track` (position, e.g. "4 of 11") — already present in the release
+- [x] `Track` (position, e.g. "4 of 11") — already present in the release
       tracklist response fetched for Duration.
-- [ ] `Album Type` (release-group primary type: Album/EP/Single/Live/
+- [x] `Album Type` (release-group primary type: Album/EP/Single/Live/
       Compilation) — already present in the release-group data; enables
-      album-vs-EP grouping in artist tables later.
+      album-vs-EP grouping in artist tables later. Deviation: landed ahead
+      of "More from this album" rather than batched with it — the
+      `SONG_HEADER_BLOCK` migration already ran (this repo's own
+      Songs/Artists notes and `Templates/New Song.md`). A downstream
+      private vault should still batch its own migration run until "More
+      from this album" also lands, to avoid two passes.
 
 Testing pass (motivation: give dev sessions a cheap `node --test` gate so
 changes are verified without a human opening Obsidian and reporting back —
@@ -62,11 +67,14 @@ Datacore rendering stays manual:
       JSX transformer (sucrase), scoped to `tools/package.json` only. (The
       New Song.md embed-consistency check was already folded in —
       `blocks.test.js`.)
-- [ ] Key-detection scorer tests: the scorer is self-contained inside
+- [x] Key-detection scorer tests: the scorer is self-contained inside
       `SONG_HEADER_BLOCK`; JSX-transform the extracted block and eval the
       scorer functions with a stubbed `dc`, then run golden cases — chord-line
       detection (≥60% rule), a few real progressions with known keys, and the
-      sheet-accidental spelling rule (G#m not Abm).
+      sheet-accidental spelling rule (G#m not Abm). Deviation: the scorer
+      region (`PC` through `bestKey`) has no `dc`/`page` references at all,
+      so instead of stubbing Datacore's API it's sliced out by anchor and
+      run standalone — no render harness needed for this one.
 - [ ] Graceful-failover regression tests for the BLOCK-side paths
       (`hostnameOf` on malformed URLs, Unknown Artist rows) — waits on the
       JSX-transform item above. The script-side failovers are already

@@ -60,6 +60,23 @@ test("findTrack prefers exact title match, tolerates '(Remastered)' via substrin
 	assert.equal(findTrack({}, "Angeles"), undefined);
 });
 
+test("findTrack carries the medium's track-count and this track's position", () => {
+	const release = {
+		media: [{ "track-count": 11, tracks: [
+			{ title: "Between the Bars", position: 4 },
+			{ title: "Ballad of Big Nothing", position: 5 },
+		] }],
+	};
+	const track = findTrack(release, "Between the Bars");
+	assert.equal(track.position, 4);
+	assert.equal(track.mediumTrackCount, 11);
+});
+
+test("findTrack falls back to tracks.length when track-count is missing", () => {
+	const release = { media: [{ tracks: [{ title: "A", position: 1 }, { title: "B", position: 2 }] }] };
+	assert.equal(findTrack(release, "B").mediumTrackCount, 2);
+});
+
 // --- coverArtUrl: a CAA 404 means "no art exists" (quiet), anything else
 // --- means the archive is unreachable (notice, so the user re-runs later)
 
@@ -117,12 +134,13 @@ function mbRoutes() {
 				{ url: { resource: "https://open.spotify.com/album/from-rg" } },
 				{ url: { resource: "https://www.youtube.com/playlist?list=rg" } },
 			],
+			"primary-type": "Album",
 		}],
 		["/ws/2/release/rel-early", {
 			"label-info": [{ label: { name: "Kill Rock Stars" } }],
-			media: [{ tracks: [
-				{ title: "Between the Bars", length: 141000, recording: { id: "rec1" } },
-				{ title: "Ballad of Big Nothing", length: 165000, recording: { id: "rec2" } },
+			media: [{ "track-count": 11, tracks: [
+				{ title: "Between the Bars", length: 141000, position: 4, recording: { id: "rec1" } },
+				{ title: "Ballad of Big Nothing", length: 165000, position: 5, recording: { id: "rec2" } },
 			] }],
 			relations: [
 				{ url: { resource: "https://open.spotify.com/album/from-release" } },
@@ -150,6 +168,8 @@ test("resolveFromReleaseGroup: earliest release, curated genres only, listen pre
 	assert.equal(result.year, "1997"); // from the EARLIEST release, not 2001
 	assert.equal(result.label, "Kill Rock Stars"); // proves rel-early was the release fetched
 	assert.equal(result.duration, "2:21");
+	assert.equal(result.track, "4 of 11");
+	assert.equal(result.albumType, "Album");
 	assert.deepEqual(result.genres, ["indie rock", "rock"]);
 	// most song-specific source wins per service: recording > release > release-group
 	assert.deepEqual(result.listen, [

@@ -20,6 +20,17 @@ description. Planned work lives in [ROADMAP.md](ROADMAP.md).
   Existing artist pages need the block migration to show the new rows:
   `node tools/migrate-blocks.js [vault-path]` (see the upgrade note
   below). Pages created after this change include them automatically.
+- Song notes gained two enriched fields, filled in by Enrich Song from data
+  already fetched for Genre/Label/Duration (no extra HTTP):
+  - `Track` — this song's position on the release, e.g. "4 of 11".
+  - `Album Type` — the release-group's MusicBrainz type: Album, EP,
+    Single, Live, or Compilation.
+
+  Both fold into the header's existing Album row ("Norm (2023) · Album ·
+  Track 1 of 12") rather than getting their own lines — three rows for one
+  album's worth of facts read as noise. Existing song notes need the block
+  migration to show them (same `tools/migrate-blocks.js` as above). Notes
+  created after this change include them automatically.
 - Offline test suite for the Templater scripts:
   `node --test "tools/tests/*.test.js"`. Plain Node, no Obsidian, no
   network. Covers the MusicBrainz enrichment pipeline (against synthetic
@@ -29,7 +40,10 @@ description. Planned work lives in [ROADMAP.md](ROADMAP.md).
   `ARTIST_PAGE_BLOCK` (via `sucrase`, the one dev dependency in the suite —
   scoped to `tools/package.json`, run `npm install` there first) so a typo
   fails the test run instead of surfacing only when a note is opened in
-  Obsidian.
+  Obsidian. Golden-case tests for the header's key-detection scorer (the
+  ≥60% chord-line rule, a couple of known progressions, and the
+  sheet-accidental spelling rule — a sharp-heavy progression spells
+  `D#m`, a flat-heavy one spells `Ebm`) round out the suite.
 - `ROADMAP.md` and this changelog. The roadmap moved out of CLAUDE.md;
   neither file ships in the release zip.
 
