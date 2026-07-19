@@ -61,7 +61,10 @@ properties panel.
    spawns a new note instead of running against the open one. *Sync Artist
    Pages* is left unbound: it runs automatically as part of Enrich Song, and
    the command palette covers the rare manual run.
-4. Open `Guitarchive.md` — it starts empty and fills in live as you add
+4. Optional but recommended: turn off **Inline title** in **Settings →
+   Appearance** — song and artist notes render their own title in the
+   header block, so the filename title just shows twice.
+5. Open `Guitarchive.md` — it starts empty and fills in live as you add
    songs to `Songs/`.
 
 ## Workflow

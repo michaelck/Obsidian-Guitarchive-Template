@@ -100,6 +100,12 @@ Later / bigger (not in v1.1.0):
   Bio-style, mark which albums have songs in the vault.
 - Discogs as an alternative `Metadata Source` — see CLAUDE.md's schema
   section.
+- Ship `.obsidian/app.json` with `showInlineTitle: false` — the song/artist
+  header blocks already render the title, so the inline filename title
+  duplicates it. Held back because app.json silently accumulates whatever
+  is touched in Settings → Editor/Files, so shipping it means pruning it
+  to deliberate settings before every release. Until then the README's
+  Setup section suggests toggling it off manually.
 - Deliberately NOT planned: catalog numbers, barcodes, country, MB ratings
   (collector metadata, not player metadata); Wikidata infobox facts (years
   active, members, origin — the Bio prose covers this for human readers).
