@@ -18,6 +18,11 @@ description. Planned work lives in [ROADMAP.md](ROADMAP.md).
   neither file ships in the release zip.
 
 ### Changed
+- Enrich Song now shows a notice when the Cover Art Archive can't be
+  reached (it's hosted on archive.org, which has outages), instead of
+  silently leaving Cover empty as if the album had no art. A genuine
+  "no cover art exists" still stays quiet. Re-run Enrich Song once the
+  archive is back to pick up the cover.
 - Each Templater script exposes its internals to the test suite through a
   `__test__` property on its export. No behavior change inside Obsidian.
 

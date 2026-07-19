@@ -1,9 +1,9 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { installGlobals, installFetch } = require("./obsidian-fakes");
+const { installGlobals, installFetch, notices } = require("./obsidian-fakes");
 
 const script = require("../../Templates/Scripts/enrichSongNote.js");
-const { matchStreamingService, streamingLinks, formatDuration, findTrack, resolveFromReleaseGroup, insertSongHeader, SONG_HEADER_BLOCK } = script.__test__;
+const { matchStreamingService, streamingLinks, formatDuration, findTrack, coverArtUrl, resolveFromReleaseGroup, insertSongHeader, SONG_HEADER_BLOCK } = script.__test__;
 
 // --- matchStreamingService: domain whitelist, https-only, no substring leaks ---
 
@@ -58,6 +58,37 @@ test("findTrack prefers exact title match, tolerates '(Remastered)' via substrin
 	assert.equal(findTrack(release, "between the bars").title, "Between the Bars (Remastered)");
 	assert.equal(findTrack(release, "Say Yes"), undefined);
 	assert.equal(findTrack({}, "Angeles"), undefined);
+});
+
+// --- coverArtUrl: a CAA 404 means "no art exists" (quiet), anything else
+// --- means the archive is unreachable (notice, so the user re-runs later)
+
+test("coverArtUrl stays quiet when both endpoints 404 — no art is normal", async () => {
+	installGlobals();
+	installFetch([["coverartarchive.org", {}, 404]]);
+	assert.equal(await coverArtUrl("rel1", "rg1"), null);
+	assert.deepEqual(notices, []);
+});
+
+test("coverArtUrl notifies on an outage instead of looking like a missing cover", async () => {
+	installGlobals();
+	installFetch([["coverartarchive.org", {}, 503]]);
+	assert.equal(await coverArtUrl("rel1", "rg1"), null);
+	assert.equal(notices.length, 1);
+	assert.match(notices[0], /Cover Art Archive unreachable \(HTTP 503\)/);
+	assert.match(notices[0], /Re-run Enrich Song/);
+});
+
+test("coverArtUrl falls back to release-group art past a release-level error, no notice", async () => {
+	installGlobals();
+	installFetch([
+		["coverartarchive.org/release/rel1", {}, 503],
+		["coverartarchive.org/release-group/rg1", { images: [{ front: true, image: "http://caa.example/front.jpg" }] }],
+	]);
+	const result = await coverArtUrl("rel1", "rg1");
+	assert.equal(result.url, "https://caa.example/front.jpg");
+	assert.equal(result.sourcePage, "https://musicbrainz.org/release-group/rg1/cover-art");
+	assert.deepEqual(notices, []);
 });
 
 // --- resolveFromReleaseGroup: the full offline pipeline against synthetic

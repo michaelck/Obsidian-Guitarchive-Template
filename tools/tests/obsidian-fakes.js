@@ -87,10 +87,12 @@ function installGlobals(appOptions) {
 
 // Routes global.fetch by URL substring: pass [[substring, responseData], ...];
 // first match wins, unmatched URLs throw so tests notice unexpected requests.
+// An optional third element sets the HTTP status ([substring, data, 503]) for
+// testing error responses.
 function installFetch(routes) {
 	global.fetch = async (url) => {
-		for (const [needle, data] of routes) {
-			if (url.includes(needle)) return { ok: true, status: 200, json: async () => data };
+		for (const [needle, data, status = 200] of routes) {
+			if (url.includes(needle)) return { ok: status < 400, status, json: async () => data };
 		}
 		throw new Error(`unexpected fetch: ${url}`);
 	};

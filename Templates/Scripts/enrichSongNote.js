@@ -129,25 +129,34 @@ const obsidianRequestUrl = (() => {
 	}
 })();
 
+// Thrown for HTTP error responses; carries .status so callers can tell a
+// genuine 404 ("this thing doesn't exist") from an outage (5xx etc.).
+class HttpError extends Error {
+	constructor(status, url) {
+		super(`HTTP ${status} from ${url}`);
+		this.status = status;
+	}
+}
+
 async function httpJson(url) {
 	if (obsidianRequestUrl) {
 		const res = await obsidianRequestUrl({ url, headers: { "User-Agent": USER_AGENT, "Accept": "application/json" }, throw: false });
-		if (res.status >= 400) throw new Error(`HTTP ${res.status} from ${url}`);
+		if (res.status >= 400) throw new HttpError(res.status, url);
 		return res.json;
 	}
 	const res = await fetch(url, { headers: { "User-Agent": USER_AGENT, "Accept": "application/json" } });
-	if (!res.ok) throw new Error(`HTTP ${res.status} from ${url}`);
+	if (!res.ok) throw new HttpError(res.status, url);
 	return res.json();
 }
 
 async function httpBinary(url) {
 	if (obsidianRequestUrl) {
 		const res = await obsidianRequestUrl({ url, headers: { "User-Agent": USER_AGENT }, throw: false });
-		if (res.status >= 400) throw new Error(`HTTP ${res.status}`);
+		if (res.status >= 400) throw new HttpError(res.status, url);
 		return { data: res.arrayBuffer, contentType: res.headers?.["content-type"] ?? "" };
 	}
 	const res = await fetch(url, { headers: { "User-Agent": USER_AGENT } });
-	if (!res.ok) throw new Error(`HTTP ${res.status}`);
+	if (!res.ok) throw new HttpError(res.status, url);
 	return { data: await res.arrayBuffer(), contentType: res.headers.get("content-type") ?? "" };
 }
 
@@ -253,6 +262,11 @@ function streamingLinks(relations) {
 // URL and a human-browsable MusicBrainz page to link back to for attribution,
 // since Cover Art Archive has no license field to pull programmatically.
 async function coverArtUrl(releaseId, releaseGroupId) {
+	// A CAA 404 means "no cover art exists for this entity" — normal, stay
+	// quiet. Anything else (5xx, network failure) means the archive is
+	// unreachable, which must not look identical to "no art": say so, so the
+	// user knows to re-run Enrich Song later instead of assuming a blank.
+	let outage = null;
 	for (const [type, id] of [["release", releaseId], ["release-group", releaseGroupId]]) {
 		if (!id) continue;
 		try {
@@ -266,9 +280,13 @@ async function coverArtUrl(releaseId, releaseGroupId) {
 					sourcePage: `https://musicbrainz.org/${type}/${id}/cover-art`,
 				};
 			}
-		} catch {
-			// try the next type
+		} catch (err) {
+			if (err?.status !== 404) outage = err; // try the next type either way
 		}
+	}
+	if (outage) {
+		const reason = outage.status ? `HTTP ${outage.status}` : outage.message;
+		new Notice(`Cover Art Archive unreachable (${reason}) — no cover saved. Re-run Enrich Song later.`);
 	}
 	return null;
 }
