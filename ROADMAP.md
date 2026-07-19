@@ -75,11 +75,20 @@ Datacore rendering stays manual:
       region (`PC` through `bestKey`) has no `dc`/`page` references at all,
       so instead of stubbing Datacore's API it's sliced out by anchor and
       run standalone — no render harness needed for this one.
-- [ ] Graceful-failover regression tests for the BLOCK-side paths
+- [x] Graceful-failover regression tests for the BLOCK-side paths
       (`hostnameOf` on malformed URLs, Unknown Artist rows) — waits on the
       JSX-transform item above. The script-side failovers are already
       covered: numeric/null/list Artist values and filename sanitization in
       `syncArtistPages.test.js`, junk/lookalike URLs in the whitelist tests.
+      Deviation: the Artist-explode flatMap (Guitarchive.md) is the one
+      block region under test that calls into the `dc` API
+      (`dc.coerce.array`), unlike the pure `hostnameOf`/key-detection
+      regions — rather than a full render harness, it gets one minimal
+      `dc.coerce.array` stub matching the documented Text-or-List contract.
+      Also confirmed the numeric-Artist case (e.g. a band named "311") is
+      string-coerced into a real row rather than falling back to Unknown
+      Artist — only null/undefined/empty/whitespace-only values fall
+      through.
 - [x] `adoptSongNote` non-destructive merge test: fake `processFrontMatter`;
       covers defaults, never-overwrite, empty-string-counts-as-missing, and
       `cssclasses` merge.

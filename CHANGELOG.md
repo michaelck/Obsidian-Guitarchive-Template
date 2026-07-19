@@ -43,7 +43,13 @@ description. Planned work lives in [ROADMAP.md](ROADMAP.md).
   Obsidian. Golden-case tests for the header's key-detection scorer (the
   ≥60% chord-line rule, a couple of known progressions, and the
   sheet-accidental spelling rule — a sharp-heavy progression spells
-  `D#m`, a flat-heavy one spells `Ebm`) round out the suite.
+  `D#m`, a flat-heavy one spells `Ebm`) round out the suite. Graceful-
+  failover regression tests cover the BLOCK-side paths too: `hostnameOf` on
+  malformed/non-URL values in both `SONG_HEADER_BLOCK` and
+  `ARTIST_PAGE_BLOCK`, and the Guitarchive index's Unknown Artist fallback
+  (null/empty/whitespace-only Artist values collapse to one row instead of
+  vanishing, while a bare-numeric Artist like a band named "311" is
+  string-coerced into a real row rather than falling back).
 - `ROADMAP.md` and this changelog. The roadmap moved out of CLAUDE.md;
   neither file ships in the release zip.
 

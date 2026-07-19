@@ -511,6 +511,24 @@ a couple of known progressions resolving to their known key, and the
 sheet-accidental spelling rule (a sharp-heavy progression spells `D#m`, a
 flat-heavy one spells `Ebm` — same pitch class, different tonic spelling).
 
+`graceful-failover.test.js` covers the BLOCK-side paths from the
+Graceful-failover conventions section above. `hostnameOf` is sliced out of
+both `SONG_HEADER_BLOCK` and `ARTIST_PAGE_BLOCK` the same anchor-string way
+as `key-detection.test.js` (pure logic, no stub needed) and tested for
+null/non-URL/number-as-string input in both copies. The Artist-explode
+`flatMap` in `Guitarchive.md`'s block is the one region under test that
+calls into the `dc` API (`dc.coerce.array`) — rather than a render harness
+it gets one minimal stub matching the documented Text-or-List contract.
+`Guitarchive.md` isn't extractable via `extractArray` (it embeds the block
+directly as a fenced ` ```datacorejsx ` block, not a `const NAME = [...]`
+array literal like the Templater scripts), so it's pulled out with the same
+fence regex `extract-blocks.js`'s CLI branch already uses to check
+`New Song.md`'s embed. Covers null/undefined/empty/whitespace-only Artist
+values collapsing to one "Unknown Artist" row, a bare-numeric Artist (e.g.
+a band named "311") being string-coerced into a real row instead of falling
+back, and a List Artist with mixed blank/real entries dropping only the
+blanks.
+
 ## Roadmap and changelog
 
 Planned work lives in `ROADMAP.md`; shipped changes in `CHANGELOG.md`
