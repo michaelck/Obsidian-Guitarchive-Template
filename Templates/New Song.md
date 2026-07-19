@@ -62,6 +62,36 @@ return function View() {
     const version = page.value("Version");
     const capoFret = parseInt(capo, 10) || 0;
     const [keyStatus, setKeyStatus] = dc.useState("");
+    const albumMbid = page.value("Album MBID");
+    const [showMoreFromAlbum, setShowMoreFromAlbum] = dc.useState(false);
+
+    // "More from this album": other vault songs sharing this note's Album
+    // MBID, queried live (no network). Hides entirely when Album MBID is
+    // empty or nothing else matches.
+    const allSongPages = dc.useQuery('@page and path("Songs")');
+    const moreFromAlbum = dc.useMemo(() => {
+        const mbid = String(albumMbid ?? "").trim();
+        if (!mbid) return [];
+        return allSongPages
+            .filter(p => p.$path !== page.$path && String(p.value("Album MBID") ?? "").trim() === mbid)
+            .map(p => {
+                const song = String(p.value("Song") ?? p.$name);
+                const trackNum = parseInt(String(p.value("Track") ?? ""), 10);
+                return {
+                    path: p.$path,
+                    link: p.$link.withDisplay(song),
+                    song,
+                    version: p.value("Version"),
+                    trackNum: Number.isFinite(trackNum) ? trackNum : null,
+                };
+            })
+            .sort((a, b) =>
+                a.trackNum !== null && b.trackNum !== null ? a.trackNum - b.trackNum
+                : a.trackNum !== null ? -1
+                : b.trackNum !== null ? 1
+                : a.song.localeCompare(b.song)
+            );
+    }, [allSongPages, albumMbid, page.$path]);
 
     // in-note trigger for enrichment — same Templater command the hotkey
     // fires, so it also works on mobile where there are no hotkeys. Hidden
@@ -178,10 +208,10 @@ return function View() {
         track ? `Track ${track}` : null,
     ].filter(Boolean).join(" · ");
 
-    // only render rows for fields that actually have a value
+    // only render rows for fields that actually have a value; Artist/Album
+    // are rendered separately below so the Album row can carry the "More
+    // from this album" toggle
     const fields = [
-        ["Artist", artist],
-        ["Album", albumLine],
         ["Label", label],
         ["Genre", genre],
         ["Duration", duration],
@@ -212,6 +242,24 @@ return function View() {
                     </h1>
                     {version && (
                         <div style={{ fontSize: "0.9em", color: "var(--text-muted)", fontStyle: "italic" }}>{version}</div>
+                    )}
+                    {artist && <div><strong>Artist:</strong> {artist}</div>}
+                    {albumLine && (
+                        <div>
+                            <div><strong>Album:</strong> {albumLine}</div>
+                            {moreFromAlbum.length > 0 && (
+                                <div style={{ fontSize: "0.9em" }}>
+                                    <a onClick={() => setShowMoreFromAlbum(s => !s)} style={{ cursor: "pointer", color: "var(--text-muted)" }}>{moreFromAlbum.length} more from this album {showMoreFromAlbum ? "▾" : "▸"}</a>
+                                </div>
+                            )}
+                            {showMoreFromAlbum && moreFromAlbum.length > 0 && (
+                                <div style={{ marginLeft: "1.2em", marginTop: "0.3em", fontSize: "0.9em" }}>
+                                    {moreFromAlbum.map(m => (
+                                        <div key={m.path}>{m.trackNum !== null ? `${m.trackNum}. ` : ""}<dc.Link link={m.link} />{m.version && <span style={{ color: "var(--text-muted)" }}> · {m.version}</span>}</div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     )}
                     {fields.map(([fieldName, value]) => (
                         <div key={fieldName}><strong>{fieldName}:</strong> {value}</div>

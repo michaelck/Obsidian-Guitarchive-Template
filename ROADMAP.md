@@ -25,19 +25,24 @@ Artist-page pass (one `ARTIST_PAGE_BLOCK` migration):
       heading of its own; the note title sits directly above).
 
 Song-header pass (one `SONG_HEADER_BLOCK` migration):
-- [ ] "More from this album" row — other vault songs sharing this note's
-      `Album MBID`, queried live in the block. No network; row hides when
-      `Album MBID` is empty or nothing else matches.
+- [x] "More from this album" toggle — other vault songs sharing this note's
+      `Album MBID`, queried live in the block. No network; hides when
+      `Album MBID` is empty or nothing else matches. Deviation from plan: a
+      full extra row read as noise for albums with many tracks, so instead
+      it's a collapsed "· N more from this album ▸" toggle appended to the
+      end of the existing Album row, expanding in place to a track-numbered
+      list (self-excluded by path, so Version notes of the same song don't
+      exclude each other).
 - [x] `Track` (position, e.g. "4 of 11") — already present in the release
       tracklist response fetched for Duration.
 - [x] `Album Type` (release-group primary type: Album/EP/Single/Live/
       Compilation) — already present in the release-group data; enables
       album-vs-EP grouping in artist tables later. Deviation: landed ahead
       of "More from this album" rather than batched with it — the
-      `SONG_HEADER_BLOCK` migration already ran (this repo's own
-      Songs/Artists notes and `Templates/New Song.md`). A downstream
-      private vault should still batch its own migration run until "More
-      from this album" also lands, to avoid two passes.
+      `SONG_HEADER_BLOCK` migration ran twice as a result (once for Track/
+      Album Type, again for "More from this album"). Both are now in, so a
+      downstream private vault only needs one migration run to pick up the
+      whole song-header pass.
 
 Testing pass (motivation: give dev sessions a cheap `node --test` gate so
 changes are verified without a human opening Obsidian and reporting back —

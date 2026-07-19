@@ -135,3 +135,83 @@ test("Artist-explode: a List Artist that is entirely blank falls back to one Unk
 	const rows = explodeArtists(fakePage(["", "   "]), dcStub);
 	assert.deepEqual(rows.map((r) => r.artist), ["Unknown Artist"]);
 });
+
+// --- "More from this album" matching/sort logic: SONG_HEADER_BLOCK ---
+//
+// The dc.useMemo callback body is pulled out by anchor string (same pattern
+// as loadExplodeArtists above) and wrapped as a plain function taking
+// (albumMbid, allSongPages, page) — the three closure values it reads. This
+// covers only the pure matching/sorting logic; the click-to-expand toggle
+// itself is Datacore render/interaction behavior and needs manual
+// verification in Obsidian (see the bigger "Datacore render harness" item
+// on ROADMAP.md).
+
+function loadMoreFromAlbum() {
+	const raw = extractArray(path.join(scriptsDir, "enrichSongNote.js"), "SONG_HEADER_BLOCK");
+	const startMarker = "const moreFromAlbum = dc.useMemo(() => {";
+	const start = raw.indexOf(startMarker);
+	assert.ok(start >= 0, "moreFromAlbum useMemo not found in SONG_HEADER_BLOCK — did it move or get renamed?");
+	const bodyStart = start + startMarker.length;
+	const endMarker = "}, [allSongPages, albumMbid, page.$path]);";
+	const end = raw.indexOf(endMarker, bodyStart);
+	assert.ok(end > bodyStart, "end of moreFromAlbum useMemo not found in SONG_HEADER_BLOCK");
+	const body = raw.slice(bodyStart, end);
+	return evalSlice(`const moreFromAlbum = function(albumMbid, allSongPages, page) {\n${body}\n};`, "moreFromAlbum");
+}
+
+const fakeSongPage = (path, fm) => ({
+	$path: path,
+	$name: path.replace(/^Songs\//, "").replace(/\.md$/, ""),
+	$link: { withDisplay: (text) => ({ path, display: text }) },
+	value: (key) => fm[key],
+});
+
+const moreFromAlbum = loadMoreFromAlbum();
+
+test("SONG_HEADER_BLOCK: moreFromAlbum returns empty when Album MBID is null/empty/whitespace-only", () => {
+	const current = { $path: "Songs/A.md" };
+	const others = [fakeSongPage("Songs/B.md", { "Album MBID": "mbid-1" })];
+	assert.deepEqual(moreFromAlbum(null, others, current), []);
+	assert.deepEqual(moreFromAlbum(undefined, others, current), []);
+	assert.deepEqual(moreFromAlbum("", others, current), []);
+	assert.deepEqual(moreFromAlbum("   ", others, current), []);
+});
+
+test("SONG_HEADER_BLOCK: moreFromAlbum returns empty when only the current note matches", () => {
+	const current = { $path: "Songs/A.md" };
+	const allSongPages = [fakeSongPage("Songs/A.md", { "Album MBID": "mbid-1", Song: "Song A" })];
+	assert.deepEqual(moreFromAlbum("mbid-1", allSongPages, current), []);
+});
+
+test("SONG_HEADER_BLOCK: moreFromAlbum excludes the current note by path, not title", () => {
+	// two Version notes of the same song share Album MBID and even Song title —
+	// only the exact path must be excluded, per CLAUDE.md's Version design
+	const current = { $path: "Songs/Hallelujah.md" };
+	const allSongPages = [
+		fakeSongPage("Songs/Hallelujah.md", { "Album MBID": "mbid-1", Song: "Hallelujah" }),
+		fakeSongPage("Songs/Hallelujah (Drop D).md", { "Album MBID": "mbid-1", Song: "Hallelujah", Version: "Drop D" }),
+	];
+	const result = moreFromAlbum("mbid-1", allSongPages, current);
+	assert.deepEqual(result.map((r) => r.path), ["Songs/Hallelujah (Drop D).md"]);
+});
+
+test("SONG_HEADER_BLOCK: moreFromAlbum sorts by Track number, missing Track last, then alphabetically by Song", () => {
+	const current = { $path: "Songs/Current.md" };
+	const allSongPages = [
+		fakeSongPage("Songs/NoTrack2.md", { "Album MBID": "mbid-1", Song: "Zeta" }),
+		fakeSongPage("Songs/Track4.md", { "Album MBID": "mbid-1", Song: "Delta", Track: "4 of 11" }),
+		fakeSongPage("Songs/NoTrack1.md", { "Album MBID": "mbid-1", Song: "Alpha" }),
+		fakeSongPage("Songs/Track1.md", { "Album MBID": "mbid-1", Song: "Beta", Track: "1 of 11" }),
+	];
+	const result = moreFromAlbum("mbid-1", allSongPages, current);
+	assert.deepEqual(result.map((r) => r.song), ["Beta", "Delta", "Alpha", "Zeta"]);
+});
+
+test("SONG_HEADER_BLOCK: moreFromAlbum does not throw on a numeric-looking Album MBID and still matches", () => {
+	// YAML hands back a number for a bare-numeric value; String()-coercion on
+	// both sides of the comparison must still line them up
+	const current = { $path: "Songs/A.md" };
+	const allSongPages = [fakeSongPage("Songs/B.md", { "Album MBID": 12345, Song: "Song B" })];
+	assert.doesNotThrow(() => moreFromAlbum(12345, allSongPages, current));
+	assert.deepEqual(moreFromAlbum(12345, allSongPages, current).map((r) => r.song), ["Song B"]);
+});

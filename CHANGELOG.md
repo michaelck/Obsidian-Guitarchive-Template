@@ -31,6 +31,11 @@ description. Planned work lives in [ROADMAP.md](ROADMAP.md).
   album's worth of facts read as noise. Existing song notes need the block
   migration to show them (same `tools/migrate-blocks.js` as above). Notes
   created after this change include them automatically.
+- "More from this album" toggle on the song header: a "· N more from this
+  album ▸" link appended to the Album row, expanding in place to a
+  track-numbered list of the vault's other songs sharing this note's
+  `Album MBID` (live query, no network). Hidden entirely when `Album MBID`
+  is empty or nothing else matches. Same block migration as above.
 - Offline test suite for the Templater scripts:
   `node --test "tools/tests/*.test.js"`. Plain Node, no Obsidian, no
   network. Covers the MusicBrainz enrichment pipeline (against synthetic
