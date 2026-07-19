@@ -26,3 +26,7 @@ Attachments/Covers/*
 .obsidian/plugins/*/main.js
 .obsidian/plugins/*/manifest.json
 .obsidian/plugins/*/styles.css
+
+# dev-only tooling deps (tools/ is export-ignored; package-lock.json is
+# tracked for reproducibility, node_modules is not)
+tools/node_modules

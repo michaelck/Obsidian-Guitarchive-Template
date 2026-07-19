@@ -11,15 +11,18 @@ type. Hard contract: `Metadata Source: none` must suppress every new lookup
 and write below.
 
 Artist-page pass (one `ARTIST_PAGE_BLOCK` migration):
-- [ ] `Listen` links on artist pages — the artist `inc=url-rels` response
+- [x] `Listen` links on artist pages — the artist `inc=url-rels` response
       (already fetched in `enrichArtistPage`, currently mined only for
       Wikipedia/Wikidata) carries streaming rels. Zero extra HTTP. Same
       `Listen` property name and domain whitelist as songs, plus the
       "official homepage" rel; deliberately no social links. Same
-      `serviceName()`/`hostnameOf()` render patterns.
-- [ ] Wikipedia `description` (one-line descriptor, already in the REST
-      summary response) as a muted subtitle under the artist name —
-      mirrors the Version subtitle on songs.
+      `serviceName()`/`hostnameOf()` render patterns. Deviation from plan:
+      MBID + Listen are now written as soon as the artist lookup succeeds,
+      so a missing Wikipedia article no longer means nothing gets saved.
+- [x] Wikipedia `description` (one-line descriptor, already in the REST
+      summary response) as a muted subtitle — stored in a `Description`
+      property; rendered above the stat tiles (the block has no name
+      heading of its own; the note title sits directly above).
 
 Song-header pass (one `SONG_HEADER_BLOCK` migration):
 - [ ] "More from this album" row — other vault songs sharing this note's
@@ -52,12 +55,12 @@ Datacore rendering stays manual:
       synthetic inline fixtures (the `mbRoutes()` helper in
       `enrichSongNote.test.js`), not recorded responses — record real ones
       only if a response-shape bug ever slips past the synthetic set.
-- [ ] Block syntax check: extract `SONG_HEADER_BLOCK` / `ARTIST_PAGE_BLOCK`
+- [x] Block syntax check: extract `SONG_HEADER_BLOCK` / `ARTIST_PAGE_BLOCK`
       and JSX-parse them, so a typo in a block fails the test run instead of
       surfacing as a broken embed only when a note is opened in Obsidian.
       This is the one place a dev dependency is justified — a small pure-JS
-      JSX transformer (e.g. sucrase), kept in `tools/` only. (The New
-      Song.md embed-consistency check is already folded in —
+      JSX transformer (sucrase), scoped to `tools/package.json` only. (The
+      New Song.md embed-consistency check was already folded in —
       `blocks.test.js`.)
 - [ ] Key-detection scorer tests: the scorer is self-contained inside
       `SONG_HEADER_BLOCK`; JSX-transform the extracted block and eval the

@@ -8,16 +8,35 @@ description. Planned work lives in [ROADMAP.md](ROADMAP.md).
 ## Unreleased
 
 ### Added
+- Artist pages gained two enriched fields, both rendered by the page
+  block and filled in by Enrich Artist:
+  - `Listen` — streaming links plus the official homepage, from the
+    artist's MusicBrainz URL relationships (same https-only domain
+    whitelist as song notes; deliberately no social links). Saved even
+    when the artist has no linked Wikipedia article.
+  - `Description` — Wikipedia's one-line descriptor ("American
+    singer-songwriter"), shown as a muted subtitle above the stats.
+
+  Existing artist pages need the block migration to show the new rows:
+  `node tools/migrate-blocks.js [vault-path]` (see the upgrade note
+  below). Pages created after this change include them automatically.
 - Offline test suite for the Templater scripts:
-  `node --test "tools/tests/*.test.js"`. Plain Node — no Obsidian, no
-  network, no dependencies. Covers the MusicBrainz enrichment pipeline
-  (against synthetic responses), frontmatter adoption, artist-page sync,
-  bio upsert, and consistency of the embedded datacorejsx blocks with
-  their copies in `Templates/New Song.md`.
+  `node --test "tools/tests/*.test.js"`. Plain Node, no Obsidian, no
+  network. Covers the MusicBrainz enrichment pipeline (against synthetic
+  responses), frontmatter adoption, artist-page sync, bio upsert, and
+  consistency of the embedded datacorejsx blocks with their copies in
+  `Templates/New Song.md`. Also JSX-parses `SONG_HEADER_BLOCK` and
+  `ARTIST_PAGE_BLOCK` (via `sucrase`, the one dev dependency in the suite —
+  scoped to `tools/package.json`, run `npm install` there first) so a typo
+  fails the test run instead of surfacing only when a note is opened in
+  Obsidian.
 - `ROADMAP.md` and this changelog. The roadmap moved out of CLAUDE.md;
   neither file ships in the release zip.
 
 ### Changed
+- The artist page's in-note action link is now "⟳ Enrich artist metadata"
+  (was "⟳ Fetch Wikipedia bio") — it saves streaming links too, not just
+  the bio. Included in the same artist-page block migration as above.
 - Enrich Song now shows a notice when the Cover Art Archive can't be
   reached (it's hosted on archive.org, which has outages), instead of
   silently leaving Cover empty as if the album had no art. A genuine

@@ -13,8 +13,8 @@ tab & chord archive — a personal songbook that organizes itself.
   Cover Art Archive.
 - **Artist pages** that build themselves: every artist gets a page with
   song/album/favorite counts and a live table of their songs — created
-  automatically when you enrich a song, complete with an optional
-  one-hotkey Wikipedia bio.
+  automatically when you enrich a song, with one-hotkey enrichment of
+  their own: streaming links, a Wikipedia bio, and a one-line descriptor.
 - **Key detection**: a "♪ Detect key from chords" link in the song header
   analyzes your chord sheet and writes the key to frontmatter (with the
   sounding key shown when a capo is set).
@@ -93,15 +93,17 @@ properties panel.
    **Tracking your own unpublished music?** Add `Metadata Source: none` to
    the song (and your artist page) — enrichment keeps doing the local work
    (header, artist page) but never queries MusicBrainz.
-5. On an artist page: **Enrich Artist** hotkey → pulls a Wikipedia bio into a
-   `## Bio` section (with attribution; your `## Notes` are never touched).
+5. On an artist page: **Enrich Artist** hotkey → saves the artist's streaming
+   and homepage links from MusicBrainz, then pulls a Wikipedia bio into a
+   `## Bio` section and a one-line descriptor shown under the page title
+   (with attribution; your `## Notes` are never touched).
 
 ## Mobile
 
 Everything should work on Obsidian mobile — all four plugins support it, and 
 the important actions are tappable, not hotkey-bound: song headers have
 **⟳ Enrich metadata** and **♪ Detect key** links, artist pages have
-**⟳ Fetch Wikipedia bio**, and the index table collapses to a compact
+**⟳ Enrich artist metadata**, and the index table collapses to a compact
 two-column layout on phones. Two tips:
 
 - Add **Adopt Song** to the mobile toolbar (**Settings → Toolbar**) — it's

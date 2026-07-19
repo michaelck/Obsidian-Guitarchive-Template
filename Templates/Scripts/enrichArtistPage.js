@@ -1,4 +1,5 @@
-// Templater user script: add a Wikipedia bio to the ACTIVE artist page.
+// Templater user script: enrich the ACTIVE artist page — streaming/homepage
+// links from MusicBrainz, plus a Wikipedia bio and one-line descriptor.
 //
 // Setup (same pattern as the other scripts):
 //   - Save as Templates/Scripts/enrichArtistPage.js
@@ -19,9 +20,13 @@
 //      hand-written notes stay separate; re-running replaces the Bio section
 //      in place rather than duplicating it).
 //
-// Frontmatter written: MBID (so re-runs skip the artist search) and
-// Wikipedia (the article URL). Wikipedia text is CC BY-SA, so the bio ends
-// with a source + license attribution line.
+// Frontmatter written: MBID (so re-runs skip the artist search), Listen
+// (streaming links from the artist's MB URL relationships — same domain
+// whitelist as songs, plus the official homepage; written even when the
+// Wikipedia chain dead-ends, since they only need MusicBrainz), Wikipedia
+// (the article URL), and Description (Wikipedia's one-line descriptor, shown
+// as a subtitle by the artist page block). Wikipedia text is CC BY-SA, so
+// the bio ends with a source + license attribution line.
 
 const USER_AGENT = "ObsidianTabVaultEnricher/1.0 (personal vault script)";
 const ARTISTS_FOLDER = "Artists";
@@ -45,6 +50,56 @@ async function jsonFetch(url) {
 	const res = await fetch(url, { headers: { "User-Agent": USER_AGENT, "Accept": "application/json" } });
 	if (!res.ok) throw new Error(`${res.status} from ${new URL(url).hostname}`);
 	return res.json();
+}
+
+// Streaming/store services worth surfacing as "Listen" links — same list and
+// matching rules as enrichSongNote.js (each script stays self-contained:
+// Templater user scripts can't reliably require each other inside Obsidian).
+// MB URL relationships are community-submitted, so match by exact hostname
+// (or subdomain), https only — a URL that merely CONTAINS a service's domain
+// must not get labeled as that service.
+const STREAMING_SERVICES = [
+	{ domains: ["open.spotify.com"], name: "Spotify" },
+	{ domains: ["music.apple.com", "itunes.apple.com"], name: "Apple Music" },
+	{ domains: ["bandcamp.com"], name: "Bandcamp" },
+	{ domains: ["youtube.com", "youtu.be"], name: "YouTube" },
+	{ domains: ["soundcloud.com"], name: "SoundCloud" },
+	{ domains: ["tidal.com"], name: "Tidal" },
+	{ domains: ["deezer.com"], name: "Deezer" },
+];
+
+function matchStreamingService(url) {
+	let parsed;
+	try {
+		parsed = new URL(url);
+	} catch {
+		return null;
+	}
+	if (parsed.protocol !== "https:") return null;
+	return (
+		STREAMING_SERVICES.find((s) =>
+			s.domains.some((domain) => parsed.hostname === domain || parsed.hostname.endsWith(`.${domain}`))
+		) ?? null
+	);
+}
+
+// Listen links for an artist, from its MB URL relationships: whitelisted
+// streaming services (first URL per service wins) plus the "official
+// homepage" rel. Deliberately no social links — MB carries rels for every
+// social network, and an artist page full of those is noise, not a songbook.
+function artistListenLinks(relations) {
+	const found = new Map();
+	for (const rel of relations ?? []) {
+		const url = rel.url?.resource;
+		if (!url) continue;
+		if (rel.type === "official homepage") {
+			if (url.startsWith("https://") && !found.has("homepage")) found.set("homepage", url);
+			continue;
+		}
+		const service = matchStreamingService(url);
+		if (service && !found.has(service.name)) found.set(service.name, url);
+	}
+	return [...found.values()];
 }
 
 async function mbSearchArtists(name) {
@@ -127,9 +182,20 @@ module.exports = async function enrichArtistPage(tp) {
 	}
 
 	const details = await jsonFetch(`https://musicbrainz.org/ws/2/artist/${mbid}?fmt=json&inc=url-rels`);
+
+	// MBID is confirmed and the url-rels are already fetched, so save the MBID
+	// and any streaming links now — they don't depend on the Wikipedia chain
+	// below panning out. An artist with no whitelisted links writes no Listen.
+	const listen = artistListenLinks(details.relations);
+	await app.fileManager.processFrontMatter(file, (f) => {
+		f.MBID = mbid;
+		if (listen.length > 0) f.Listen = listen;
+	});
+
 	const title = await wikipediaTitle(details.relations);
 	if (!title) {
-		new Notice(`MusicBrainz has no Wikipedia/Wikidata link for ${details.name ?? name}.`);
+		const saved = listen.length > 0 ? ` Saved ${listen.length} listen link(s).` : "";
+		new Notice(`MusicBrainz has no Wikipedia/Wikidata link for ${details.name ?? name}.${saved}`);
 		return;
 	}
 
@@ -158,11 +224,14 @@ module.exports = async function enrichArtistPage(tp) {
 	await app.vault.process(file, (content) => upsertBioSection(content, bioSection));
 
 	await app.fileManager.processFrontMatter(file, (f) => {
-		f.MBID = mbid;
 		f.Wikipedia = pageUrl;
+		// Wikipedia's one-line descriptor ("American singer-songwriter") —
+		// rendered by the artist page block as a subtitle under the title
+		if (summary.description) f.Description = summary.description;
 	});
 
-	new Notice(`Added Wikipedia bio to "${file.basename}".`);
+	const savedLinks = listen.length > 0 ? ` + ${listen.length} listen link(s)` : "";
+	new Notice(`Enriched "${file.basename}": Wikipedia bio${savedLinks}.`);
 };
 
 // Exposed for the offline test suite (tools/tests/) — inert inside Obsidian.
@@ -170,4 +239,5 @@ module.exports.__test__ = {
 	mbSearchArtists,
 	wikipediaTitle,
 	upsertBioSection,
+	artistListenLinks,
 };

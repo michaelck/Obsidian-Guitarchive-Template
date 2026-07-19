@@ -1,7 +1,6 @@
-// Consistency checks for the embedded datacorejsx blocks. JSX *parsing* of
-// the blocks is a separate roadmap item (needs a JSX transformer dependency);
-// these only guard the plumbing that already exists: the eval-extraction used
-// by migrations, and the copy of the song header embedded in New Song.md.
+// Consistency checks for the embedded datacorejsx blocks: the eval-extraction
+// used by migrations, and the copy of the song header embedded in
+// New Song.md. JSX *syntax* validation lives in block-syntax.test.js.
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");

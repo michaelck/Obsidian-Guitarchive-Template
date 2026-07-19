@@ -27,7 +27,7 @@ guitarchive-template/            # ← repo root = vault root
 │       ├── Enrich Song.md       # trigger template: <%* await tp.user.enrichSongNote(tp) %>
 │       ├── syncArtistPages.js   # user script: create missing Artists/ pages
 │       ├── Sync Artist Pages.md # trigger template
-│       ├── enrichArtistPage.js  # user script: Wikipedia bio for an artist page
+│       ├── enrichArtistPage.js  # user script: artist enrichment (MB listen links + Wikipedia bio)
 │       ├── Enrich Artist.md     # trigger template
 │       ├── adoptSongNote.js     # user script: merge standard frontmatter into an imported note
 │       └── Adopt Song.md        # trigger template
@@ -131,8 +131,12 @@ MusicBrainz; rate limit 60 req/min authenticated.
 
 Artist pages (`Artists/`) have their own schema: `Name` (Text — the EXACT
 artist string as it appears in song frontmatter), plus, once enriched, `MBID`
-(Text — MusicBrainz artist id, lets re-runs skip the search/picker) and
-`Wikipedia` (Text — article URL). Song matching is done against `Name`, never
+(Text — MusicBrainz artist id, lets re-runs skip the search/picker),
+`Wikipedia` (Text — article URL), `Listen` (List — streaming links plus the
+official homepage from the artist's MB url-rels; same https-only domain
+whitelist as songs, deliberately no social links), and `Description` (Text —
+Wikipedia's one-line descriptor, rendered by the page block as a muted
+subtitle above the stat tiles). Song matching is done against `Name`, never
 against the filename, because filenames are sanitized (`/`, `:` etc.
 replaced) while `Name` stays literal.
 
@@ -316,8 +320,8 @@ The header has an actions row of tappable links (hotkeys don't exist on
 mobile): "⟳ Enrich metadata" runs the same Templater command the hotkey
 fires, via `dc.app.commands.executeCommandById("templater-obsidian:Templates/
 Scripts/Enrich Song.md")`, guarded with `findCommand` so it hides when the
-command isn't registered. Artist pages get the same pattern for "⟳ Fetch
-Wikipedia bio". Adopt Song deliberately has no in-note trigger (it targets
+command isn't registered. Artist pages get the same pattern for "⟳ Enrich
+artist metadata". Adopt Song deliberately has no in-note trigger (it targets
 notes that don't have our blocks yet) — on mobile it goes in the toolbar.
 
 ## `syncArtistPages.js` design summary
@@ -326,10 +330,13 @@ Templater user script (trigger template: `Templates/Scripts/Sync Artist
 Pages.md`, same hotkey pattern as Enrich Song). Scans all `Songs/` frontmatter
 for distinct Artist values and creates one page per artist in `Artists/` —
 frontmatter `Name: "<exact artist string>"`, an embedded datacorejsx block —
-a stat-tile row (distinct Songs / distinct Albums / Favorites, same tile style as
+a muted `Description` subtitle (when enriched), a stat-tile row (distinct
+Songs / distinct Albums / Favorites, same tile style as
 Guitarchive; counts computed from the plain `pages` array rather than the
-`songs` DataArray so `Set`/`flatMap` are safe) above a table of that artist's
-songs (matched via `Name`, sorted by Release Year then Song then Version, with the same
+`songs` DataArray so `Set`/`flatMap` are safe), a `Listen` links row (labels
+via the same `serviceName()`/`hostnameOf()` helpers duplicated into the
+block; the homepage link labels as its bare hostname) above a table of that
+artist's songs (matched via `Name`, sorted by Release Year then Song then Version, with the same
 cover-thumbnail/♡-toggle patterns as Guitarchive) — and a `## Notes` heading
 for hand-written content. Deliberate choices: existing pages are **never
 regenerated or touched** (they accumulate manual notes below the table);
@@ -390,7 +397,8 @@ lists exactly which keys were added.
 
 ## `enrichArtistPage.js` design summary
 
-Adds a Wikipedia bio to the active artist page (trigger template:
+Enriches the active artist page — Listen links from MusicBrainz plus a
+Wikipedia bio and one-line descriptor (trigger template:
 `Templates/Scripts/Enrich Artist.md`). MusicBrainz stores no prose bios —
 its own site shows Wikipedia extracts — so the chain is: MB artist search →
 url-rels → English Wikipedia title (direct `wikipedia` rel if en.wikipedia,
@@ -406,8 +414,13 @@ else `wikidata` rel → QID → enwiki sitelink) → Wikipedia REST summary
   place. Wikipedia text is CC BY-SA, so the section ends with a
   source-plus-license attribution line (same spirit as the cover-art
   caption).
-- Writes `MBID` and `Wikipedia` to frontmatter; a stored MBID makes re-runs
-  skip the search entirely.
+- Writes `MBID` and `Listen` (mined from the same url-rels response — zero
+  extra HTTP; the script duplicates the song script's domain whitelist
+  because Templater user scripts can't reliably require each other) as soon
+  as the artist lookup succeeds, BEFORE the Wikipedia chain — so an artist
+  with no linked article still gets its streaming links saved. `Wikipedia`
+  and `Description` (the REST summary's one-liner) are written only when
+  the bio lands. A stored MBID makes re-runs skip the search entirely.
 - If MB has no Wikipedia/Wikidata rel for the artist, the script notices and
   writes nothing — there is deliberately no name-based Wikipedia search
   fallback, since matching articles by bare name risks grabbing the wrong
@@ -451,10 +464,11 @@ Design decisions:
 ## Test suite (July 2026)
 
 `node --test "tools/tests/*.test.js"` from the repo root — run it before
-declaring any script/block change done. Quote the glob: on current Node a
-bare directory argument is require()d, not discovered. Zero dependencies
-(built-in `node:test`), fully offline, ~100ms. Manual Obsidian verification
-is only needed for rendering/UX changes, not script logic.
+declaring any script/block change done (run `npm install` inside `tools/`
+once first — see dependency note below). Quote the glob: on current Node a
+bare directory argument is require()d, not discovered. Built on `node:test`,
+fully offline, ~100ms. Manual Obsidian verification is only needed for
+rendering/UX changes, not script logic.
 
 How it hooks in: each Templater script exposes its internals via a
 `module.exports.__test__` bag appended at the bottom (inert inside Obsidian —
@@ -469,6 +483,17 @@ and the New Song.md embedded copy of the song header. Notable fake
 behaviors: `vault.process` rejects async callbacks (the real one requires
 synchronous), and `processFrontMatter` mutates the object the test passed
 in, so assertions read it back directly.
+
+`block-syntax.test.js` JSX-parses `SONG_HEADER_BLOCK`/`ARTIST_PAGE_BLOCK`
+(via sucrase's transform, then a `new Function` parse of the result), so a
+typo in a block fails `node --test` instead of surfacing as a broken embed
+only when a note is opened in Obsidian. It's a syntax check only — it
+doesn't execute the blocks or stub the `dc` API (that's the bigger
+"Datacore render harness" item in ROADMAP.md). This is the one test with a
+real dependency: `tools/package.json` pulls in `sucrase` as a devDependency,
+scoped to `tools/` (its own `node_modules`, gitignored; `package-lock.json`
+is tracked) precisely because `tools/` is already export-ignored — the
+release zip never sees it.
 
 ## Roadmap and changelog
 

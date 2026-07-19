@@ -1,0 +1,8 @@
+{
+  "name": "guitarchive-template-tools",
+  "private": true,
+  "description": "Dev-only tooling for the Guitarchive template repo (block migration, tests). Not part of the shipped vault — see tools/ export-ignore in .gitattributes.",
+  "devDependencies": {
+    "sucrase": "^3.35.1"
+  }
+}
