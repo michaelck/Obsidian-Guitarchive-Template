@@ -508,9 +508,14 @@ h3 { font-size: 1.05rem; margin-bottom: 0.35rem; }
   white-space: pre;
 }
 
-/* artist-page sketch: five-column song table plus the Bio section */
+/* artist-page sketch: descriptor subtitle and Listen links above a
+   five-column song table, plus the Bio section. Service names are real
+   text (the app labels links by service), the descriptor stays a bar. */
 .sk-artist .sk-thead,
 .sk-artist .sk-row { grid-template-columns: 1.4fr 14px 1.3fr 0.7fr 0.45fr; }
+.sk-desc { display: grid; }
+.sk-desc i { height: 7px; border-radius: 4px; background: oklch(0.89 0.012 345); }
+.sk-linktext { color: oklch(0.55 0.12 20); font-weight: 600; }
 .sk-songcell { display: grid; gap: 4px; }
 .sk-songcell .sk-sub { height: 6px; width: 45%; opacity: 0.55; }
 .sk-bio { display: grid; gap: 8px; justify-items: start; }

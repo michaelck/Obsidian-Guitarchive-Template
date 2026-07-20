@@ -100,13 +100,21 @@ Datacore rendering stays manual:
 - [x] Document the gate — CLAUDE.md's Test suite section.
 
 Release chores for v1.1.0:
-- [ ] Stop export-ignoring `tools/` (or add a README "Upgrading" section) —
+- [x] Stop export-ignoring `tools/` (or add a README "Upgrading" section) —
       zip users currently have no way to run the block migration on an
-      existing vault.
-- [ ] Release-notes caveat: `migrate-blocks.js` replaces embedded blocks
-      wholesale, so hand-customized blocks lose their tweaks. (Drafted in
-      CHANGELOG.md's Unreleased section — carry it into the GitHub release
-      description.)
+      existing vault. Deviation: did both halves. The export-ignore was
+      narrowed rather than dropped — `migrate-blocks.js` and
+      `extract-blocks.js` ship (dependency-free, plain Node) while
+      `tools/tests/` and the npm package files stay out of the zip — AND
+      the README gained an "Upgrading" walkthrough. `migrate-blocks.js`
+      also grew a `--dry-run` flag so the walkthrough can say "preview
+      first"; covered by `migrate-blocks.test.js` (temp-dir vault
+      fixture, real child-process runs).
+- [x] Release-notes caveat: `migrate-blocks.js` replaces embedded blocks
+      wholesale, so hand-customized blocks lose their tweaks. Deviation:
+      instead of living only in release notes (which scroll away), the
+      warning's permanent home is now the README's Upgrading section;
+      CHANGELOG's upgrade note echoes it and points there.
 
 Later / bigger (not in v1.1.0):
 - Datacore render harness: stub the full `dc` API (`useQuery`, `useState`,

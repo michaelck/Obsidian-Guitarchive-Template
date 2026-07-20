@@ -32,11 +32,13 @@ guitarchive-template/            # ← repo root = vault root
 │       ├── adoptSongNote.js     # user script: merge standard frontmatter into an imported note
 │       └── Adopt Song.md        # trigger template
 ├── docs/                        # one-pager site (index.html + style.css) — export-ignored
-├── tools/                       # node maintenance scripts (block migration) — export-ignored
+├── tools/                       # node maintenance scripts; migrate-blocks.js + extract-blocks.js
+│                                #   SHIP in the zip (dependency-free — zip users need the block
+│                                #   migration); tests/ + package files export-ignored
 ├── .obsidian/                   # SHIPPED config: community-plugins list, Templater data.json,
 │                                #   hotkeys.json, song-note.css snippet; plugin binaries gitignored
 ├── README.md · LICENSE (MIT, attributed to "michaelck")
-├── .gitattributes               # export-ignore: docs/, tools/, CLAUDE.md, .claude/
+├── .gitattributes               # export-ignore: docs/, tools/tests/, tools/package*.json, CLAUDE.md, .claude/
 └── .gitignore                   # .obsidian session state + plugin main.js/manifest/styles
 ```
 
@@ -59,9 +61,15 @@ guitarchive-template/            # ← repo root = vault root
   AI-generated — no filler superlatives, no bullet-point salad, no
   "delve"/"seamless"/"powerful".
 - Release archives: `.gitattributes` `export-ignore` keeps `docs/`,
-  `tools/`, `CLAUDE.md`, and `.claude/` out of the GitHub "Source code"
-  zip, so **the release zip IS a clean, openable vault**. Any new
-  non-vault file/dir added to the repo needs an `export-ignore` line.
+  `tools/tests/`, `tools/package.json`/`package-lock.json`, `CLAUDE.md`,
+  and `.claude/` out of the GitHub "Source code" zip, so **the release
+  zip IS a clean, openable vault**. `tools/migrate-blocks.js` and
+  `tools/extract-blocks.js` deliberately DO ship (since v1.1.0) — they're
+  dependency-free and zip users need them to upgrade an existing vault
+  (README "Upgrading" section documents the flow). Any new non-vault
+  file/dir added to the repo needs an `export-ignore` line; any new
+  dependency in the migration scripts would break the ship-in-zip
+  promise, so keep them plain `node:fs`/`node:path`.
 - Releases are cut manually by the maintainer; tag scheme `vX.Y.Z` (first release
   `v0.1.0`, matching the initial commit's "Guitarchive v0.1" naming). The
   docs hero CTA links to `/releases/latest`, so a published release must
@@ -377,12 +385,16 @@ The two embedded datacorejsx blocks (`SONG_HEADER_BLOCK` in
 single source of truth. Because existing notes are never auto-updated, any
 block redesign needs:
 
-- `node tools/migrate-blocks.js [vault-path]` — rewrites the embedded block
-  in every `Songs/*.md` and `Artists/*.md` of the target vault (defaults to
-  this repo; pass a downstream vault's path to migrate that instead) **and**
-  refreshes the embed in `Templates/New Song.md`. It evals the block array
-  literals straight out of the scripts via `tools/extract-blocks.js`, so
-  there's no pasted copy to drift.
+- `node tools/migrate-blocks.js [--dry-run] [vault-path]` — rewrites the
+  embedded block in every `Songs/*.md` and `Artists/*.md` of the target
+  vault (defaults to this repo; pass a downstream vault's path to migrate
+  that instead) **and** refreshes the embed in `Templates/New Song.md`.
+  `--dry-run` (either argument position) prints the same per-file report
+  without writing — the README's Upgrading flow tells users to preview
+  with it first. It evals the block array literals straight out of the
+  scripts via `tools/extract-blocks.js`, so there's no pasted copy to
+  drift. End-to-end covered by `tools/tests/migrate-blocks.test.js`
+  (temp-dir vault fixture, real child-process runs).
 - `node tools/extract-blocks.js <scripts-dir> [<New Song.md>]` — standalone
   check that the `New Song.md` embed matches `SONG_HEADER_BLOCK` (useful as
   a test/CI step).
@@ -497,8 +509,9 @@ doesn't execute the blocks or stub the `dc` API (that's the bigger
 "Datacore render harness" item in ROADMAP.md). This is the one test with a
 real dependency: `tools/package.json` pulls in `sucrase` as a devDependency,
 scoped to `tools/` (its own `node_modules`, gitignored; `package-lock.json`
-is tracked) precisely because `tools/` is already export-ignored — the
-release zip never sees it.
+is tracked). `tools/tests/` and both package files are export-ignored, so
+the release zip never sees the suite or its dependency — only the two
+dependency-free migration scripts ship (see ground rules).
 
 `key-detection.test.js` runs golden cases against the header block's
 self-contained key-detection scorer (`PC` through `bestKey` — no `dc`/`page`

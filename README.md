@@ -110,6 +110,30 @@ two-column layout on phones. Two tips:
   the one command without an in-note link, since it targets freshly imported
   notes that don't have a header yet.
 
+## Upgrading
+
+New releases sometimes redesign the header and table blocks embedded in
+song and artist notes. Notes you already have don't pick that up on their
+own — a migration script rewrites the embedded block in each note. It
+ships in the release zip under `tools/` and runs on plain
+[Node.js](https://nodejs.org), nothing to install beyond that.
+
+1. **Back up your vault first.** The migration replaces each note's
+   embedded `datacorejsx` block wholesale — if you've hand-customized a
+   block inside a note, those edits are overwritten.
+2. Extract the new release zip somewhere *outside* your vault.
+3. Copy the new `Templates/Scripts/` files (plus any other changed vault
+   files the release notes name) over your vault's copies. Do this before
+   migrating — the script reads the blocks from *your vault's* scripts,
+   not from where it's run.
+4. From the extracted zip, preview what would change:
+
+   ```
+   node tools/migrate-blocks.js --dry-run /path/to/your/vault
+   ```
+
+   then run the same command without `--dry-run` to apply.
+
 ## A note on copyright
 
 This repo ships no song content — nothing in it reproduces a copyrighted

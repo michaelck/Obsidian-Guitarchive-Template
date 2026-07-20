@@ -5,18 +5,22 @@
 // artist pages are never regenerated — block redesigns don't propagate on
 // their own.
 //
-// usage: node tools/migrate-blocks.js [vault-path]
+// usage: node tools/migrate-blocks.js [--dry-run] [vault-path]
 //   vault-path defaults to this repo's root (repo root = vault root here);
 //   pass another vault's path to migrate a downstream vault. The
 //   scripts are always read from the TARGET vault's Templates/Scripts, so
-//   copy updated scripts over first.
+//   copy updated scripts over first. --dry-run prints the same per-file
+//   report without writing anything.
 const fs = require("fs");
 const path = require("path");
 const { extractArray } = require("./extract-blocks.js");
 
-const VAULT = path.resolve(process.argv[2] || path.join(__dirname, ".."));
+const args = process.argv.slice(2);
+const DRY_RUN = args.includes("--dry-run");
+const vaultArg = args.find((arg) => arg !== "--dry-run");
+const VAULT = path.resolve(vaultArg || path.join(__dirname, ".."));
 const SCRIPTS = path.join(VAULT, "Templates/Scripts");
-console.log("vault:", VAULT);
+console.log("vault:", VAULT + (DRY_RUN ? " (dry run — nothing will be written)" : ""));
 
 // SONG_HEADER_BLOCK's joined form carries a trailing newline (final "" element);
 // the in-file fence match doesn't include it, so trim for the replacement
@@ -41,6 +45,10 @@ function migrateFile(file, label, marker, newBlock) {
 	const [m] = fences;
 	if (m[0] === newBlock) {
 		console.log(`  ok    ${label} — already current`);
+		return;
+	}
+	if (DRY_RUN) {
+		console.log(`  DONE  ${label} — would update`);
 		return;
 	}
 	const updated = content.slice(0, m.index) + newBlock + content.slice(m.index + m[0].length);

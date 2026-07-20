@@ -5,7 +5,7 @@ collects notes for the next release; when the maintainer cuts a release,
 retitle the section with the version and paste it into the GitHub release
 description. Planned work lives in [ROADMAP.md](ROADMAP.md).
 
-## Unreleased
+## v1.1.0 — 2026-07-19
 
 ### Added
 - Artist pages gained two enriched fields, both rendered by the page
@@ -55,6 +55,14 @@ description. Planned work lives in [ROADMAP.md](ROADMAP.md).
   (null/empty/whitespace-only Artist values collapse to one row instead of
   vanishing, while a bare-numeric Artist like a band named "311" is
   string-coerced into a real row rather than falling back).
+- The block-migration tooling now ships in the release zip:
+  `tools/migrate-blocks.js` and `tools/extract-blocks.js` run on plain
+  Node with no dependencies, so zip users can upgrade an existing vault
+  without cloning the repo. `migrate-blocks.js` gained a `--dry-run`
+  flag that prints the per-file report without writing anything. The
+  README's new "Upgrading" section walks through the whole flow:
+  back up, copy the new scripts over, preview with `--dry-run`, apply.
+  (The test suite and its npm packaging stay out of the zip.)
 - `ROADMAP.md` and this changelog. The roadmap moved out of CLAUDE.md;
   neither file ships in the release zip.
 
@@ -70,10 +78,12 @@ description. Planned work lives in [ROADMAP.md](ROADMAP.md).
 - Each Templater script exposes its internals to the test suite through a
   `__test__` property on its export. No behavior change inside Obsidian.
 
-### Upgrade note (carry into the next release's notes)
+### Upgrade note
 - `tools/migrate-blocks.js` replaces embedded datacorejsx blocks
   wholesale. If you customized a block inside a song or artist note, the
   migration overwrites those edits — back up customized notes first.
+  The README's "Upgrading" section is the permanent home of this warning
+  and of the step-by-step upgrade flow; release notes only echo it.
 
 ## v1.0.1 — 2026-07-18
 

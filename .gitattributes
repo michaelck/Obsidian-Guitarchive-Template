@@ -1,5 +1,7 @@
 docs/ export-ignore
-tools/ export-ignore
+tools/tests/ export-ignore
+tools/package.json export-ignore
+tools/package-lock.json export-ignore
 CLAUDE.md export-ignore
 .claude export-ignore
 ROADMAP.md export-ignore
