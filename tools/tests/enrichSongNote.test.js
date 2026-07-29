@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const { installGlobals, installFetch, notices } = require("./obsidian-fakes");
 
 const script = require("../../Templates/Scripts/enrichSongNote.js");
-const { matchStreamingService, streamingLinks, formatDuration, findTrack, coverArtUrl, resolveFromReleaseGroup, insertSongHeader, SONG_HEADER_BLOCK } = script.__test__;
+const { matchStreamingService, streamingLinks, formatDuration, findTrack, coverArtUrl, getReleaseGroupLabels, resolveFromReleaseGroup, insertSongHeader, SONG_HEADER_BLOCK } = script.__test__;
 
 // --- matchStreamingService: domain whitelist, https-only, no substring leaks ---
 
@@ -122,6 +122,8 @@ function mbRoutes() {
 				{ id: "rel-late", date: "2001-05-01" },
 				{ id: "rel-early", date: "1997" },
 			],
+			// (release-group/r1 carries no label-info — labels come from the
+			// separate release-browse route below)
 			// slice(0,3) happens BEFORE the junk filter, so the junk entry
 			// costs a slot: expect exactly ["indie rock", "rock"]
 			genres: [
@@ -136,8 +138,17 @@ function mbRoutes() {
 			],
 			"primary-type": "Album",
 		}],
+		// browse: every release in the group, with labels — one real label, a
+		// "[no label]" special entity (must be omitted), and a later release
+		// on a second real label plus a duplicate of the first (must dedupe)
+		["/ws/2/release?release-group=rg1", {
+			releases: [
+				{ id: "rel-early", date: "1997", "label-info": [{ label: { name: "Kill Rock Stars" } }] },
+				{ id: "rel-nolabel", date: "1997", "label-info": [{ label: { name: "[no label]" } }] },
+				{ id: "rel-late", date: "2001-05-01", "label-info": [{ label: { name: "Domino" } }, { label: { name: "Kill Rock Stars" } }] },
+			],
+		}],
 		["/ws/2/release/rel-early", {
-			"label-info": [{ label: { name: "Kill Rock Stars" } }],
 			media: [{ "track-count": 11, tracks: [
 				{ title: "Between the Bars", length: 141000, position: 4, recording: { id: "rec1" } },
 				{ title: "Ballad of Big Nothing", length: 165000, position: 5, recording: { id: "rec2" } },
@@ -166,7 +177,9 @@ test("resolveFromReleaseGroup: earliest release, curated genres only, listen pre
 	assert.equal(result.album, "Either/Or");
 	assert.equal(result.rgid, "rg1");
 	assert.equal(result.year, "1997"); // from the EARLIEST release, not 2001
-	assert.equal(result.label, "Kill Rock Stars"); // proves rel-early was the release fetched
+	// all distinct real labels across the group, first-seen order, "[no label]"
+	// omitted and the duplicate Kill Rock Stars deduped
+	assert.deepEqual(result.labels, ["Kill Rock Stars", "Domino"]);
 	assert.equal(result.duration, "2:21");
 	assert.equal(result.track, "4 of 11");
 	assert.equal(result.albumType, "Album");
@@ -180,6 +193,40 @@ test("resolveFromReleaseGroup: earliest release, curated genres only, listen pre
 	// CAA plain-http URLs are force-upgraded for iOS
 	assert.equal(result.cover.url, "https://caa.example/large.jpg");
 	assert.equal(result.cover.sourcePage, "https://musicbrainz.org/release/rel-early/cover-art");
+});
+
+// Regression: the reported Adrianne Lenker "Hours Were the Birds" case — three
+// releases share the earliest date, two on the "[no label]" special entity and
+// one on a real label (4AD). The old code sorted by date and read one release's
+// label, so MB's arbitrary ordering could surface "[no label]"; now every real
+// label across the group is collected and "[no label]" is dropped.
+test("getReleaseGroupLabels collects all real labels across the group and omits [no label]", async () => {
+	installGlobals();
+	installFetch([
+		["/ws/2/release?release-group=rg-hwtb", {
+			releases: [
+				{ id: "cd", date: "2014-01-09", "label-info": [{ label: { name: "[no label]" } }] },
+				{ id: "dig1", date: "2014-01-09", "label-info": [{ label: { name: "[no label]" } }] },
+				{ id: "dig2", date: "2014-01-09", "label-info": [{ label: { name: "4AD" } }] },
+				{ id: "reissue", date: "2018-11-16", "label-info": [{ label: { name: "Saddle Creek Records" } }] },
+			],
+		}],
+	]);
+	assert.deepEqual(await getReleaseGroupLabels("rg-hwtb"), ["4AD", "Saddle Creek Records"]);
+});
+
+test("getReleaseGroupLabels returns an empty list when every release is [no label] or unlabeled", async () => {
+	installGlobals();
+	installFetch([
+		["/ws/2/release?release-group=rg-diy", {
+			releases: [
+				{ id: "a", date: "2020", "label-info": [{ label: { name: "[no label]" } }] },
+				{ id: "b", date: "2020" }, // no label-info at all
+				{ id: "c", date: "2020", "label-info": [{ label: null }] },
+			],
+		}],
+	]);
+	assert.deepEqual(await getReleaseGroupLabels("rg-diy"), []);
 });
 
 test("resolveFromReleaseGroup reports the last query tried when nothing matches", async () => {

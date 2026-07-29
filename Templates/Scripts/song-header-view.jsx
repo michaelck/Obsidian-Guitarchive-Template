@@ -26,7 +26,7 @@ function SongHeader({ dc }) {
     const year = page.value("Release Year");
     const albumType = page.value("Album Type");
     const track = page.value("Track");
-    const label = page.value("Label");
+    const label = dc.coerce.array(page.value("Label") ?? []).join(", ");
     const duration = page.value("Duration");
     const tuning = page.value("Tuning");
     const capo = page.value("Capo");

@@ -15,7 +15,7 @@
     "CoverSource": "text",
     "Genre": "multitext",
     "Release Year": "text",
-    "Label": "text",
+    "Label": "multitext",
     "Duration": "text",
     "Listen": "multitext",
     "Originally Tabbed By": "text",
