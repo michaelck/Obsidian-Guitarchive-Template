@@ -29,13 +29,16 @@ const artistBlock = extractArray(path.join(SCRIPTS, "syncArtistPages.js"), "ARTI
 
 const FENCE = /```datacorejsx\n[\s\S]*?\n```/g;
 
-function migrateFile(file, label, marker, newBlock) {
+function migrateFile(file, label, markers, newBlock) {
 	const content = fs.readFileSync(file, "utf8");
 	// find the one fence that is OUR block (song notes may contain other
-	// fenced blocks; the marker call only appears in ours)
-	const fences = [...content.matchAll(FENCE)].filter((m) => m[0].includes(marker));
+	// fenced blocks; only ours carries one of these markers). A note may hold
+	// EITHER a legacy inline block (e.g. dc.useCurrentFile()) or the current
+	// loader stub (song-header-view.jsx), so any marker matching makes the
+	// migration idempotent — a second run finds the stub and reports it current.
+	const fences = [...content.matchAll(FENCE)].filter((m) => markers.some((k) => m[0].includes(k)));
 	if (fences.length === 0) {
-		console.log(`  SKIP  ${label} — no block with ${marker}`);
+		console.log(`  SKIP  ${label} — no block matching ${markers.join(" / ")}`);
 		return;
 	}
 	if (fences.length > 1) {
@@ -56,16 +59,19 @@ function migrateFile(file, label, marker, newBlock) {
 	console.log(`  DONE  ${label}`);
 }
 
-function migrateFolder(folder, marker, newBlock) {
+function migrateFolder(folder, markers, newBlock) {
 	for (const name of fs.readdirSync(path.join(VAULT, folder)).sort()) {
 		if (!name.endsWith(".md")) continue;
-		migrateFile(path.join(VAULT, folder, name), `${folder}/${name}`, marker, newBlock);
+		migrateFile(path.join(VAULT, folder, name), `${folder}/${name}`, markers, newBlock);
 	}
 }
 
+const SONG_MARKERS = ["dc.useCurrentFile()", "song-header-view.jsx"];
+const ARTIST_MARKERS = ['current.value("Name")', "artist-page-view.jsx"];
+
 console.log("Songs/ (header block):");
-migrateFolder("Songs", "dc.useCurrentFile()", songBlock);
+migrateFolder("Songs", SONG_MARKERS, songBlock);
 console.log("Artists/ (page block):");
-migrateFolder("Artists", 'current.value("Name")', artistBlock);
+migrateFolder("Artists", ARTIST_MARKERS, artistBlock);
 console.log("Templates/New Song.md (header embed):");
-migrateFile(path.join(VAULT, "Templates/New Song.md"), "Templates/New Song.md", "dc.useCurrentFile()", songBlock);
+migrateFile(path.join(VAULT, "Templates/New Song.md"), "Templates/New Song.md", SONG_MARKERS, songBlock);

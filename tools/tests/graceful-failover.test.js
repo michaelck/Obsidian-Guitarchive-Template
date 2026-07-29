@@ -2,19 +2,19 @@
 // CLAUDE.md's "Graceful-failover conventions" section — malformed or
 // unusual frontmatter must never crash a rendered block.
 //
-// hostnameOf is sliced out of SONG_HEADER_BLOCK/ARTIST_PAGE_BLOCK the same
-// way key-detection.test.js slices the key-detection scorer: pure logic,
-// no dc/page API involved, so no stubbed Datacore render harness needed.
-// The Artist-explode flatMap in Guitarchive.md DOES call dc.coerce.array,
-// so it gets one minimal stub for that single call rather than a full
-// render harness (the bigger "Datacore render harness" item stays on
-// ROADMAP.md for actual render-path testing).
+// hostnameOf is sliced out of the song-header-view.jsx / artist-page-view.jsx
+// components the same way key-detection.test.js slices the key-detection
+// scorer: pure logic, no dc/page API involved, so no stubbed Datacore render
+// harness needed. The Artist-explode flatMap in Guitarchive.md DOES call
+// dc.coerce.array, so it gets one minimal stub for that single call rather
+// than a full render harness (the bigger "Datacore render harness" item stays
+// on ROADMAP.md for actual render-path testing).
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { transform } = require("sucrase");
-const { extractArray } = require("../extract-blocks");
+const { extractComponent } = require("../extract-blocks");
 
 const scriptsDir = path.join(__dirname, "../../Templates/Scripts");
 const repoRoot = path.join(__dirname, "../..");
@@ -25,28 +25,28 @@ function evalSlice(slice, returnExpr) {
 	return new Function(`return ${code};`)();
 }
 
-// --- hostnameOf: duplicated in SONG_HEADER_BLOCK (enrichSongNote.js) and ---
-// --- ARTIST_PAGE_BLOCK (syncArtistPages.js) — both copies must be tested ---
+// --- hostnameOf: duplicated in song-header-view.jsx and ---
+// --- artist-page-view.jsx — both copies must be tested ---
 
-function loadHostnameOf(file, blockName) {
-	const raw = extractArray(path.join(scriptsDir, file), blockName);
+function loadHostnameOf(file) {
+	const raw = extractComponent(path.join(scriptsDir, file));
 	const start = raw.indexOf("const hostnameOf = url => {");
-	assert.ok(start >= 0, `hostnameOf not found in ${blockName} (${file}) — did it move or get renamed?`);
+	assert.ok(start >= 0, `hostnameOf not found in ${file} — did it move or get renamed?`);
 	// anchor the end on the catch body rather than indentation, since the two
-	// blocks indent this function differently (nested vs. top-level)
+	// components indent this function differently (nested vs. top-level)
 	const catchIdx = raw.indexOf("catch { return String(url); }", start);
-	assert.ok(catchIdx > start, `hostnameOf's catch body not found in ${blockName} — did the fallback behavior change?`);
+	assert.ok(catchIdx > start, `hostnameOf's catch body not found in ${file} — did the fallback behavior change?`);
 	const braceIdx = raw.indexOf("};", catchIdx);
-	assert.ok(braceIdx > catchIdx, `end of hostnameOf not found in ${blockName}`);
+	assert.ok(braceIdx > catchIdx, `end of hostnameOf not found in ${file}`);
 	const slice = raw.slice(start, braceIdx + 2);
 	return evalSlice(slice, "hostnameOf");
 }
 
-for (const [label, file, blockName] of [
-	["SONG_HEADER_BLOCK", "enrichSongNote.js", "SONG_HEADER_BLOCK"],
-	["ARTIST_PAGE_BLOCK", "syncArtistPages.js", "ARTIST_PAGE_BLOCK"],
+for (const [label, file] of [
+	["song-header-view.jsx", "song-header-view.jsx"],
+	["artist-page-view.jsx", "artist-page-view.jsx"],
 ]) {
-	const hostnameOf = loadHostnameOf(file, blockName);
+	const hostnameOf = loadHostnameOf(file);
 
 	test(`${label}: hostnameOf strips www. from a valid URL`, () => {
 		assert.equal(hostnameOf("https://www.example.com/foo"), "example.com");
@@ -136,7 +136,7 @@ test("Artist-explode: a List Artist that is entirely blank falls back to one Unk
 	assert.deepEqual(rows.map((r) => r.artist), ["Unknown Artist"]);
 });
 
-// --- "More from this album" matching/sort logic: SONG_HEADER_BLOCK ---
+// --- "More from this album" matching/sort logic: song-header-view.jsx ---
 //
 // The dc.useMemo callback body is pulled out by anchor string (same pattern
 // as loadExplodeArtists above) and wrapped as a plain function taking
@@ -147,14 +147,14 @@ test("Artist-explode: a List Artist that is entirely blank falls back to one Unk
 // on ROADMAP.md).
 
 function loadMoreFromAlbum() {
-	const raw = extractArray(path.join(scriptsDir, "enrichSongNote.js"), "SONG_HEADER_BLOCK");
+	const raw = extractComponent(path.join(scriptsDir, "song-header-view.jsx"));
 	const startMarker = "const moreFromAlbum = dc.useMemo(() => {";
 	const start = raw.indexOf(startMarker);
-	assert.ok(start >= 0, "moreFromAlbum useMemo not found in SONG_HEADER_BLOCK — did it move or get renamed?");
+	assert.ok(start >= 0, "moreFromAlbum useMemo not found in song-header-view.jsx — did it move or get renamed?");
 	const bodyStart = start + startMarker.length;
 	const endMarker = "}, [allSongPages, albumMbid, page.$path]);";
 	const end = raw.indexOf(endMarker, bodyStart);
-	assert.ok(end > bodyStart, "end of moreFromAlbum useMemo not found in SONG_HEADER_BLOCK");
+	assert.ok(end > bodyStart, "end of moreFromAlbum useMemo not found in song-header-view.jsx");
 	const body = raw.slice(bodyStart, end);
 	return evalSlice(`const moreFromAlbum = function(albumMbid, allSongPages, page) {\n${body}\n};`, "moreFromAlbum");
 }
