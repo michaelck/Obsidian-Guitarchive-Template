@@ -114,7 +114,22 @@ Single, Live, Compilation; secondary types are ignored), `Track` (Text — this
 song's position on the release, e.g. "4 of 11"; both written by enrichment,
 already present in the release-group/tracklist responses fetched for Genre
 and Duration, so no extra HTTP), `Label`
-(Text), `Duration` (Text, "m:ss"), `Listen` (List of streaming URLs —
+(List — a release-group can appear on several labels, e.g. an album issued on
+4AD and later reissued on Saddle Creek; enrichment writes every distinct real
+label across the group's releases, **always as a list even for a single label**
+(like Genre/Listen), and `Label` is registered `multitext` in
+`.obsidian/types.json` — writing a bare string for one label would trip
+Obsidian's type-mismatch warning. This is why `Label` is `multitext` while
+`Album` — also multi-value-capable — stays `text`: enrichment routinely
+produces multi-label values, but only ever writes a single Album, so a list
+Album is a rare hand-entry (which does show a mismatch on `Album`; accepted, to
+keep the common single-album note a plain string). MusicBrainz's
+special-purpose `[no label]` entity — self-published / white-label releases —
+is a literal string the API returns, not an empty value, and is deliberately
+omitted; a group with only `[no label]` releases writes no Label. Labels are
+ordered by the earliest release date each appears on, so the original label
+comes first and re-runs don't reshuffle the list),
+`Duration` (Text, "m:ss"), `Listen` (List of streaming URLs —
 Spotify/Bandcamp/etc., written by enrichment when MusicBrainz has them),
 `Originally Tabbed By` (Text — who transcribed the tab this note started
 from; "Originally" because the note's tab is expected to drift from the
@@ -267,8 +282,14 @@ Search path when all three fields are present: search MusicBrainz
 release-groups by Artist + Album (a small, precise search space) → user picks
 via `tp.system.suggester` if more than one match → richer lookup on the chosen
 release-group (`inc=genres+tags+releases`) → resolve the earliest linked
-release → look up that release's tracklist (`inc=recordings+labels`) to get
-Label and this specific song's Duration.
+release → look up that release's tracklist (`inc=recordings+labels`) for this
+specific song's Duration/Track. Label is handled separately (`getReleaseGroupLabels`,
+one `/release?release-group=<id>&inc=labels` browse call): it's a group-level
+fact, not a release-level one, so rather than reading one release's label the
+script collects every distinct real label across all the group's releases (see
+the `Label` schema note above for the `[no label]` omission and date ordering).
+This also sidesteps a bug where same-date releases tie-broke arbitrarily and
+could surface `[no label]` even when a sibling release named the real label.
 
 **Genre only ever comes from MusicBrainz's curated `genres` field — never from
 the free-text `tags` field.** Tags are user-submitted folksonomy and turned out

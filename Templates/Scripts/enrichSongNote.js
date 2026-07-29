@@ -204,6 +204,29 @@ async function getReleaseTracklist(releaseId) {
 	return mbFetch(url);
 }
 
+// All distinct labels a release-group appeared on, gathered in one browse call
+// across every release in the group. "[no label]" is MusicBrainz's special
+// self-published / white-label entity, not a real label name — it's omitted,
+// so a group with only "[no label]" releases yields an empty list. Labels are
+// ordered by the earliest release date each appears on (original label first,
+// reissue labels after), ties alphabetical — MB's browse order isn't
+// date-sorted, so this keeps the list deterministic across re-runs instead of
+// reshuffling the frontmatter each time.
+async function getReleaseGroupLabels(rgid) {
+	const url = `https://musicbrainz.org/ws/2/release?release-group=${rgid}&fmt=json&inc=labels&limit=100`;
+	const data = await mbFetch(url);
+	const earliestByLabel = new Map();
+	for (const release of data.releases ?? []) {
+		const date = release.date || "9999"; // undated releases sort last
+		for (const info of release["label-info"] ?? []) {
+			const name = info.label?.name;
+			if (!name || name === "[no label]") continue;
+			if (!earliestByLabel.has(name) || date < earliestByLabel.get(name)) earliestByLabel.set(name, date);
+		}
+	}
+	return [...earliestByLabel.keys()].sort((a, b) => earliestByLabel.get(a).localeCompare(earliestByLabel.get(b)) || a.localeCompare(b));
+}
+
 // URL relationships for a single recording — the only place MusicBrainz holds
 // song-specific (rather than album-level) streaming links.
 async function getRecordingUrlRels(recordingId) {
@@ -392,12 +415,18 @@ async function resolveFromReleaseGroup(tp, artist, album, song) {
 		for (const [name, url] of map) if (!listenByService.has(name)) listenByService.set(name, url);
 	};
 
-	let label = null;
+	// Label is a group-level fact, not a release-level one: an album can come
+	// out on several labels (4AD + Saddle Creek…), so gather every distinct
+	// real label across the group rather than picking one release's label and
+	// discarding the rest. (The earliest release below still supplies the
+	// per-release facts — Duration/Track/streaming/cover — that genuinely are
+	// release-specific.)
+	const labels = await getReleaseGroupLabels(choice.id);
+
 	let duration = null;
 	let trackPosition = null;
 	if (release) {
 		const releaseData = await getReleaseTracklist(release.id);
-		label = releaseData["label-info"]?.[0]?.label?.name ?? null;
 		const track = findTrack(releaseData, song);
 		duration = formatDuration(track?.length);
 		if (track?.position && track?.mediumTrackCount) trackPosition = `${track.position} of ${track.mediumTrackCount}`;
@@ -420,7 +449,7 @@ async function resolveFromReleaseGroup(tp, artist, album, song) {
 	// primary type alone is enough for album-vs-EP grouping
 	const albumType = rgDetails["primary-type"] ?? null;
 
-	return { album: choice.title, year, genres, label, duration, track: trackPosition, albumType, cover, listen: [...listenByService.values()], rgid: choice.id };
+	return { album: choice.title, year, genres, labels, duration, track: trackPosition, albumType, cover, listen: [...listenByService.values()], rgid: choice.id };
 }
 
 module.exports = async function enrichSongNote(tp) {
@@ -476,7 +505,7 @@ module.exports = async function enrichSongNote(tp) {
 		return;
 	}
 
-	const { album, year, genres, label, duration, track, albumType, cover, listen, rgid } = result;
+	const { album, year, genres, labels, duration, track, albumType, cover, listen, rgid } = result;
 
 	// Cover resolution, cheapest first: (1) another song of the same album
 	// (Album MBID match) with a local cover; (2) the deterministic covers file
@@ -507,7 +536,10 @@ module.exports = async function enrichSongNote(tp) {
 		if (album) f.Album = album;
 		if (year) f["Release Year"] = year;
 		if (genres.length > 0) f.Genre = genres;
-		if (label) f.Label = label;
+		// Always a list, like Genre/Listen — Label is registered "multitext" in
+		// .obsidian/types.json, so writing a bare string for a single label
+		// would trip Obsidian's "expected Text/List" type-mismatch warning
+		if (labels.length > 0) f.Label = labels;
 		if (duration) f.Duration = duration;
 		if (track) f.Track = track;
 		if (albumType) f["Album Type"] = albumType;
@@ -532,6 +564,7 @@ module.exports.__test__ = {
 	findTrack,
 	coverArtUrl,
 	mbSearchReleaseGroups,
+	getReleaseGroupLabels,
 	resolveFromReleaseGroup,
 	insertSongHeader,
 	SONG_HEADER_BLOCK,

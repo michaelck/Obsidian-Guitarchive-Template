@@ -26,6 +26,21 @@ description. Planned work lives in [ROADMAP.md](ROADMAP.md).
   without `--dry-run`. Notes created after this change use the stub
   automatically. (Editing a component doesn't hot-reload into already-open
   notes — reopen the note or reload Obsidian to pick up changes.)
+- `Label` is now a List property (`multitext`). Enrich Song writes every
+  distinct label a release-group appeared on (an album issued on 4AD and
+  reissued on Saddle Creek both), ordered original-label-first, always as a
+  list — same as Genre. Re-run Enrich Song on existing notes to convert a
+  single-string `Label` to the list form.
+
+### Fixed
+- Enrich Song no longer writes `[no label]` as a song's Label. That's
+  MusicBrainz's special-purpose entity for self-published / white-label
+  releases, not a real label — it's now omitted. Previously, when several
+  releases shared the earliest date, the script read one release's label
+  arbitrarily and could surface `[no label]` even when a sibling release on
+  the same date named the real label (e.g. Adrianne Lenker's "Hours Were the
+  Birds", where the CD is `[no label]` but the same-day digital release is on
+  4AD). Re-run Enrich Song on affected notes to pick up the corrected labels.
 
 ## v1.1.0 — 2026-07-19
 
