@@ -21,8 +21,10 @@ guitarchive-template/            # ← repo root = vault root
 ├── Artists/                     # ships EMPTY (.gitkeep)
 ├── Attachments/Covers/          # ships EMPTY — downloaded covers are never committed
 ├── Templates/
-│   ├── New Song.md              # Templater folder template for Songs/ (embeds the header block)
+│   ├── New Song.md              # Templater folder template for Songs/ (embeds the header loader stub)
 │   └── Scripts/                 # Templater "Script files folder location"
+│       ├── song-header-view.jsx # SHARED song-header component, dc.require'd by every song note's stub
+│       ├── artist-page-view.jsx # SHARED artist-page component, dc.require'd by every artist page's stub
 │       ├── enrichSongNote.js    # user script: MusicBrainz enrichment
 │       ├── Enrich Song.md       # trigger template: <%* await tp.user.enrichSongNote(tp) %>
 │       ├── syncArtistPages.js   # user script: create missing Artists/ pages
@@ -283,7 +285,9 @@ are applied too inconsistently to filter on. Coverage is patchy (the script
 resolves the *earliest* release, often a physical edition with no links), so
 an empty `Listen` is normal and nothing gets written in that case. The header
 block labels each URL by domain via a small `serviceName()` helper duplicated
-inside the block (the block must stay self-contained).
+into both the song and artist components (they're separate `.jsx` files;
+Templater user scripts and Datacore components can't reliably require shared
+helpers out of each other, so small helpers are copied rather than shared).
 
 All HTTP goes through `httpJson`/`httpBinary` helpers that use **Obsidian's
 `requestUrl` when available** (via a guarded `require("obsidian")`), falling
@@ -315,19 +319,23 @@ API, so a `CoverSource` property (link to the MusicBrainz cover-art page) is
 stored, and the header block shows a small "Cover art © respective rights
 holder" caption rather than implying free use.
 
-The datacorejsx header block is always (re)inserted after the frontmatter,
-even when MusicBrainz wasn't queried, and only renders rows for fields that
-actually have values — a bare note with just Artist/Song/Tuning/Capo gets a
-clean 4-line header instead of a wall of "-" placeholders, and fills in more
-rows automatically as fields get populated later.
+The datacorejsx block is always (re)inserted after the frontmatter, even when
+MusicBrainz wasn't queried. It's now a tiny **loader stub** — it
+`dc.require`s the real component from `Templates/Scripts/song-header-view.jsx`
+and renders it (see "Shared header/artist components" below); the component
+only renders rows for fields that actually have values, so a bare note with
+just Artist/Song/Tuning/Capo gets a clean 4-line header instead of a wall of
+"-" placeholders, and fills in more rows as fields get populated later.
 
 Gotcha: `insertSongHeader` skips notes whose body already contains
-`dc.useCurrentFile()`, so **changing `SONG_HEADER_BLOCK` does not update
-existing notes** — any header redesign needs the block migration (see
-`tools/` below) run against every vault that has existing notes, AND
-`Templates/New Song.md`, which embeds a copy of the block (added July 2026 so
-brand-new notes carry the header — and its tappable action links — before
-ever being enriched; important on mobile).
+`song-header-view.jsx` (the new stub) **or** `dc.useCurrentFile()` (a legacy
+inline block), so it never double-inserts. Because the stub only names the
+component, **editing `song-header-view.jsx` propagates to every note on the
+next Datacore reload — no migration needed for a header redesign.** The block
+migration is now only for the one-time transition of existing notes from the
+old inline block to the stub (see `tools/` below). `Templates/New Song.md`
+embeds the same stub so brand-new notes carry the header — and its tappable
+action links — before ever being enriched (important on mobile).
 
 The header has an actions row of tappable links (hotkeys don't exist on
 mobile): "⟳ Enrich metadata" runs the same Templater command the hotkey
@@ -374,21 +382,78 @@ Datacore table in this project should get the same `COMPACT_COLUMNS` +
 measured-width treatment — full tables force horizontal scrolling in narrow
 panes, and `dc.app.isMobile` alone can't see a squeezed desktop window.
 
-Because existing artist pages are never regenerated, **changing
-`ARTIST_PAGE_BLOCK` needs the same one-off block migration as the song
-header** — that's what `tools/migrate-blocks.js` does.
+Like the song header, the artist page block is now a loader stub pointing at
+`Templates/Scripts/artist-page-view.jsx`, so **editing that component
+propagates to every artist page on the next reload** — no migration for a
+redesign. Existing pages built with the old inline block still need the
+one-time inline→stub migration (`tools/migrate-blocks.js`).
+
+## Shared header/artist components (`dc.require`) — July 2026
+
+The song header and artist page components live in their own files —
+`Templates/Scripts/song-header-view.jsx` (exports `{ SongHeader }`) and
+`artist-page-view.jsx` (exports `{ ArtistPage }`) — and each note's body is a
+4-line loader stub that pulls the component in at render time:
+
+```datacorejsx
+const { SongHeader } = await dc.require(dc.fileLink("Templates/Scripts/song-header-view.jsx"));
+return function View() {
+    return <SongHeader dc={dc} />;
+}
+```
+
+This **reverses the earlier "the block must stay self-contained" rule** —
+deliberately. It was adopted (July 2026) because every note embedding ~280
+lines of JSX made notes miserable to edit and forced a block migration for
+every redesign. Key facts about `dc.require` (verified against the installed
+Datacore 0.1.29 bundle, `.obsidian/plugins/datacore/main.js`):
+
+- It loads `.jsx`/`.js`/`.ts`/`.tsx` by vault path, transpiles, evals, and
+  returns whatever the file `return`s (no `export` keyword — use
+  `return { SongHeader };`). Scripts are `require`-style, not ES `import`;
+  no cyclical deps.
+- **`dc` is passed as a prop, never closed over from module scope.** Each
+  rendered block gets its own `DatacoreLocalApi` with its own script cache,
+  so today each note re-evals the component against its own `dc` and there's
+  no cross-note contamination. But the cache keys by path and evals the
+  module body once, so if a future Datacore ever shared that cache globally,
+  a component that closed over the module-scope `dc` would render the first
+  caller's note everywhere. Passing `dc={dc}` and using only `props.dc`
+  keeps the component correct regardless. The artist component's `dc`-using
+  helpers (`coverSrc`, `toggleFavorite`, `StatTile`, …) live **inside**
+  `ArtistPage({ dc })` for the same reason.
+- **The cost / new failure mode:** every song and artist note now has a
+  runtime dependency on its component file. Rename/move/delete
+  `song-header-view.jsx` and every song header breaks. The `.jsx` files are
+  therefore load-bearing and MUST ship in the release zip (they're in
+  `Templates/Scripts/`, not export-ignored). `blocks.test.js` guards this:
+  it asserts each stub's `dc.require` path resolves to an existing file that
+  exports the destructured name. README's Upgrading step 3 warns users to
+  copy the **whole** `Templates/Scripts/` folder.
+- Editing a component does **not** hot-reload into already-open notes — the
+  per-block script cache holds the first eval until the Datacore index
+  reloads (reopen the note, or reload Obsidian). Still far better than a
+  per-note migration, just not literally live.
+
+The `.jsx` files are the single source of truth for the component logic; the
+`SONG_HEADER_BLOCK`/`ARTIST_PAGE_BLOCK` constants are now just the loader-stub
+text (still array-of-lines + join so `extract-blocks`/`migrate-blocks` and the
+`New Song.md` embed check keep working).
 
 ## Block migration — `tools/`
 
-The two embedded datacorejsx blocks (`SONG_HEADER_BLOCK` in
-`enrichSongNote.js`, `ARTIST_PAGE_BLOCK` in `syncArtistPages.js`) are the
-single source of truth. Because existing notes are never auto-updated, any
-block redesign needs:
+Now a **one-time transition tool**: it rewrites existing notes still carrying
+the old inline block into the loader stub. After that, component redesigns
+need no migration (edit the `.jsx`). Still needed for:
 
 - `node tools/migrate-blocks.js [--dry-run] [vault-path]` — rewrites the
   embedded block in every `Songs/*.md` and `Artists/*.md` of the target
   vault (defaults to this repo; pass a downstream vault's path to migrate
   that instead) **and** refreshes the embed in `Templates/New Song.md`.
+  It matches a note's block by **either** the legacy marker
+  (`dc.useCurrentFile()` / `current.value("Name")`) **or** the new stub
+  marker (`song-header-view.jsx` / `artist-page-view.jsx`), so it stays
+  idempotent — a second run finds the stub already current.
   `--dry-run` (either argument position) prints the same per-file report
   without writing — the README's Upgrading flow tells users to preview
   with it first. It evals the block array literals straight out of the
@@ -495,17 +560,21 @@ synthetic responses; the scripts' `requestUrl` path is unavailable under
 Node, so they fall through to fetch on their own. The fakes implement only
 the API surface the scripts actually use — a test blowing up on a missing
 fake method means a script grew a new Obsidian dependency, which is worth
-noticing. `blocks.test.js` also guards the extract-blocks eval-extraction
-and the New Song.md embedded copy of the song header. Notable fake
+noticing. `blocks.test.js` also guards the extract-blocks eval-extraction,
+the New Song.md embedded copy of the stub, and the runtime-dependency
+invariant (each stub's `dc.require` path resolves to an existing `.jsx` that
+exports the destructured component name). Notable fake
 behaviors: `vault.process` rejects async callbacks (the real one requires
 synchronous), and `processFrontMatter` mutates the object the test passed
 in, so assertions read it back directly.
 
-`block-syntax.test.js` JSX-parses `SONG_HEADER_BLOCK`/`ARTIST_PAGE_BLOCK`
-(via sucrase's transform, then a `new Function` parse of the result), so a
-typo in a block fails `node --test` instead of surfacing as a broken embed
-only when a note is opened in Obsidian. It's a syntax check only — it
-doesn't execute the blocks or stub the `dc` API (that's the bigger
+`block-syntax.test.js` JSX-parses the `song-header-view.jsx` /
+`artist-page-view.jsx` components **and** the two loader stubs (via sucrase's
+transform, then a `new Function` parse of the result — the wrapper is `async`
+so the stub's top-level `await dc.require` parses), so a typo fails
+`node --test` instead of surfacing as a broken embed only when a note is
+opened in Obsidian. It's a syntax check only — it
+doesn't execute the components or stub the `dc` API (that's the bigger
 "Datacore render harness" item in ROADMAP.md). This is the one test with a
 real dependency: `tools/package.json` pulls in `sucrase` as a devDependency,
 scoped to `tools/` (its own `node_modules`, gitignored; `package-lock.json`
@@ -513,10 +582,11 @@ is tracked). `tools/tests/` and both package files are export-ignored, so
 the release zip never sees the suite or its dependency — only the two
 dependency-free migration scripts ship (see ground rules).
 
-`key-detection.test.js` runs golden cases against the header block's
+`key-detection.test.js` runs golden cases against the header component's
 self-contained key-detection scorer (`PC` through `bestKey` — no `dc`/`page`
-references at all), sliced out of `SONG_HEADER_BLOCK` by anchor string
-rather than executing the whole `View()` function, so it needs no stubbed
+references at all), sliced out of `song-header-view.jsx` by anchor string
+(via `extractComponent`, which just reads the `.jsx` source) rather than
+executing the whole `SongHeader` component, so it needs no stubbed
 Datacore API. Also run through sucrase, with `disableESTransforms: true` so
 `??`/`?.` stay native instead of downleveling to sucrase's helper functions
 (which aren't defined in the eval'd scope). Covers the ≥60% chord-line rule,
@@ -526,8 +596,9 @@ flat-heavy one spells `Ebm` — same pitch class, different tonic spelling).
 
 `graceful-failover.test.js` covers the BLOCK-side paths from the
 Graceful-failover conventions section above. `hostnameOf` is sliced out of
-both `SONG_HEADER_BLOCK` and `ARTIST_PAGE_BLOCK` the same anchor-string way
-as `key-detection.test.js` (pure logic, no stub needed) and tested for
+both `song-header-view.jsx` and `artist-page-view.jsx` the same anchor-string
+way as `key-detection.test.js` (via `extractComponent`; pure logic, no stub
+needed) and tested for
 null/non-URL/number-as-string input in both copies. The Artist-explode
 `flatMap` in `Guitarchive.md`'s block is the one region under test that
 calls into the `dc` API (`dc.coerce.array`) — rather than a render harness

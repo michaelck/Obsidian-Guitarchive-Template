@@ -5,6 +5,28 @@ collects notes for the next release; when the maintainer cuts a release,
 retitle the section with the version and paste it into the GitHub release
 description. Planned work lives in [ROADMAP.md](ROADMAP.md).
 
+## v1.2.0 — 2026-07-28
+
+### Changed
+- Song and artist notes no longer embed the full header/page block. Each
+  note's body is now a small loader stub that pulls the component in at
+  render time from `Templates/Scripts/song-header-view.jsx` /
+  `artist-page-view.jsx`. Editing a note is pleasant again (a few lines
+  instead of ~280), and a header/page redesign is now a single-file edit
+  that every note picks up on the next reload — no per-note migration.
+
+  **This makes the two `.jsx` files load-bearing:** a song or artist note
+  shows a broken block if its vault is missing them, so when upgrading,
+  copy the **whole** `Templates/Scripts/` folder, not just the scripts you
+  recognize (README's Upgrading section says the same).
+
+  Existing notes still carrying the old inline block need a one-time
+  migration to the stub: preview with
+  `node tools/migrate-blocks.js --dry-run [vault-path]`, then run it
+  without `--dry-run`. Notes created after this change use the stub
+  automatically. (Editing a component doesn't hot-reload into already-open
+  notes — reopen the note or reload Obsidian to pick up changes.)
+
 ## v1.1.0 — 2026-07-19
 
 ### Added

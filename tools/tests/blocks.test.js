@@ -23,3 +23,32 @@ test("New Song.md embeds an up-to-date copy of SONG_HEADER_BLOCK", () => {
 	// the joined block ends with "```\n" (trailing "" array element)
 	assert.equal(m[0] + "\n", SONG_HEADER_BLOCK);
 });
+
+// Each loader stub is now a runtime dependency: it dc.requires a .jsx
+// component from a fixed path, so a typo in that path (or a missing/renamed
+// file) silently breaks every note's header. Guard both halves — the path the
+// stub names must exist, and the file must export the component the stub
+// destructures.
+for (const [label, block, file, exportName] of [
+	["SONG_HEADER_BLOCK", SONG_HEADER_BLOCK, "song-header-view.jsx", "SongHeader"],
+	["ARTIST_PAGE_BLOCK", ARTIST_PAGE_BLOCK, "artist-page-view.jsx", "ArtistPage"],
+]) {
+	test(`${label} loader stub points at an existing component that exports ${exportName}`, () => {
+		const requiredPath = block.match(/dc\.require\(dc\.fileLink\("([^"]+)"\)\)/);
+		assert.ok(requiredPath, `${label} does not dc.require(dc.fileLink(...)) a component path`);
+		assert.equal(requiredPath[1], `Templates/Scripts/${file}`, `${label} requires an unexpected path`);
+
+		const componentPath = path.join(scriptsDir, file);
+		assert.ok(fs.existsSync(componentPath), `${componentPath} is missing — every note's block would break`);
+
+		const src = fs.readFileSync(componentPath, "utf8");
+		assert.ok(
+			new RegExp(`return\\s*\\{[^}]*\\b${exportName}\\b`).test(src),
+			`${file} does not \`return { ${exportName} }\` — the stub's destructure would be undefined`
+		);
+		assert.ok(
+			block.includes(`{ ${exportName} }`),
+			`${label} does not destructure { ${exportName} } from the component`
+		);
+	});
+}

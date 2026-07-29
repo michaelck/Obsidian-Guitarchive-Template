@@ -125,7 +125,11 @@ ships in the release zip under `tools/` and runs on plain
 3. Copy the new `Templates/Scripts/` files (plus any other changed vault
    files the release notes name) over your vault's copies. Do this before
    migrating — the script reads the blocks from *your vault's* scripts,
-   not from where it's run.
+   not from where it's run. Copy the **whole** `Templates/Scripts/` folder,
+   not just the two scripts you recognize: song and artist notes now load
+   their header from `song-header-view.jsx` / `artist-page-view.jsx` in that
+   folder at render time, so a note whose vault is missing those files shows
+   a broken block.
 4. From the extracted zip, preview what would change:
 
    ```

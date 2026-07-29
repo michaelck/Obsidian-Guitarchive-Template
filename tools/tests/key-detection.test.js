@@ -1,6 +1,7 @@
-// The key-detection scorer lives inside SONG_HEADER_BLOCK (self-contained —
-// no references to `dc`/`page`), so it's sliced out by anchor rather than
-// executing the whole View() function; that would need a stubbed Datacore
+// The key-detection scorer lives inside the song header component
+// (Templates/Scripts/song-header-view.jsx — self-contained, no references to
+// `dc`/`page`), so it's sliced out by anchor rather than executing the whole
+// SongHeader component; that would need a stubbed Datacore
 // render-time API, which is the bigger "Datacore render harness" item in
 // ROADMAP.md. Run through sucrase anyway (transforms: ["jsx"]) for parity
 // with block-syntax.test.js and in case this region ever grows JSX by
@@ -10,15 +11,15 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const path = require("node:path");
 const { transform } = require("sucrase");
-const { extractArray } = require("../extract-blocks");
+const { extractComponent } = require("../extract-blocks");
 
 const scriptsDir = path.join(__dirname, "../../Templates/Scripts");
 
 function loadScorer() {
-	const raw = extractArray(path.join(scriptsDir, "enrichSongNote.js"), "SONG_HEADER_BLOCK");
+	const raw = extractComponent(path.join(scriptsDir, "song-header-view.jsx"));
 	const start = raw.indexOf("    const PC = ");
 	const end = raw.indexOf("\n\n    const detectKey");
-	assert.ok(start >= 0 && end > start, "key-detection region not found in SONG_HEADER_BLOCK — did PC/detectKey get renamed?");
+	assert.ok(start >= 0 && end > start, "key-detection region not found in song-header-view.jsx — did PC/detectKey get renamed?");
 	const slice = raw.slice(start, end);
 	const wrapped = `(function() {\n${slice}\nreturn { parseChord, extractChords, bestKey };\n})()`;
 	const { code } = transform(wrapped, { transforms: ["jsx"], disableESTransforms: true });

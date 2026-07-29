@@ -118,11 +118,20 @@ Release chores for v1.1.0:
 
 Later / bigger (not in v1.1.0):
 - Datacore render harness: stub the full `dc` API (`useQuery`, `useState`,
-  `Table`, `Link`…) over preact and actually invoke the blocks' `View()`
-  functions against fixture pages — would let tests catch render-path
-  regressions (compact-layout collapse, favorite toggle, unknown-artist
-  rows), not just syntax. Big lift; only worth it if block bugs keep
-  slipping past the 1.1.0 syntax/scorer tests.
+  `Table`, `Link`…) over preact and actually invoke the components against
+  fixture pages — would let tests catch render-path regressions
+  (compact-layout collapse, favorite toggle, unknown-artist rows), not just
+  syntax. Now more tractable: `song-header-view.jsx` / `artist-page-view.jsx`
+  export named components (`SongHeader`, `ArtistPage`) that a harness can
+  `require`-eval and invoke with a stubbed `dc` prop, instead of slicing
+  regions out by anchor string. Big lift; only worth it if component bugs
+  keep slipping past the syntax/scorer tests.
+- Give `Guitarchive.md` the same loader-stub treatment as song/artist notes.
+  It's the last remaining inline datacorejsx block (its own single note, so
+  no per-note duplication pain — lower priority), but moving its view into a
+  shared `guitarchive-view.jsx` would unify the pattern and let the same
+  render harness cover it. `graceful-failover.test.js`'s Guitarchive.md
+  Artist-explode slice would repoint to that file.
 - Artist photo from the Wikipedia lead image — needs a Commons `imageinfo`
   call for license + photographer attribution (`Photo`/`PhotoSource`
   properties, same discipline as `CoverSource`; reuse the

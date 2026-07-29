@@ -15,7 +15,14 @@ function extractArray(file, name) {
 	return eval(literal).join("\n");
 }
 
-module.exports = { extractArray };
+// The header/artist components now live in their own .jsx files (loaded at
+// render time via dc.require); tests that slice pure-logic functions out of
+// them by anchor string read the raw source through this.
+function extractComponent(file) {
+	return fs.readFileSync(file, "utf8");
+}
+
+module.exports = { extractArray, extractComponent };
 
 if (require.main === module) {
 	const scriptsDir = process.argv[2];
