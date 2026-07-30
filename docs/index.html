@@ -21,9 +21,14 @@
 <meta property="og:title" content="Guitarchive — a guitar tab archive for Obsidian">
 <meta property="og:description" content="An Obsidian starter vault for keeping your own guitar tab & chord archive — a personal songbook that organizes itself.">
 <meta property="og:url" content="https://michaelckappeler.com/Obsidian-Guitarchive-Template/">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://michaelckappeler.com/Obsidian-Guitarchive-Template/og-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Guitarchive — the archive index dashboard: stat tiles, search and filters, and a table of songs.">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Guitarchive — a guitar tab archive for Obsidian">
 <meta name="twitter:description" content="An Obsidian starter vault for keeping your own guitar tab & chord archive — a personal songbook that organizes itself.">
+<meta name="twitter:image" content="https://michaelckappeler.com/Obsidian-Guitarchive-Template/og-card.png">
 <meta name="theme-color" content="#211a20">
 <script>
   // theme is a site choice, not a system pref: dark unless the visitor
@@ -37,6 +42,7 @@
   "name": "Guitarchive",
   "description": "An Obsidian starter vault for keeping your own guitar tab & chord archive — a searchable index, semi-automated metadata from MusicBrainz, and artist pages that build themselves.",
   "url": "https://michaelckappeler.com/Obsidian-Guitarchive-Template/",
+  "image": "https://michaelckappeler.com/Obsidian-Guitarchive-Template/og-card.png",
   "codeRepository": "https://github.com/michaelck/Obsidian-Guitarchive-Template",
   "programmingLanguage": "JavaScript",
   "runtimePlatform": "Obsidian",
@@ -160,8 +166,9 @@
           <h3>Artist pages that build themselves</h3>
           <p>Every artist in your archive automatically gets a page with song, album, and favorite counts
           and a live table of their songs — with one-hotkey enrichment of its
-          own: streaming links, a Wikipedia bio, and a one-line descriptor.
-          Customize them as you'd like.</p>
+          own: streaming links, a Wikipedia bio and one-line descriptor, the
+          artist's photo, and a discography that flags the albums you already
+          have songs from. Customize them as you'd like.</p>
         </article>
         <article class="card">
           <div class="card-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l10-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg></div>
@@ -223,13 +230,18 @@
           <div class="sketch sk-artist" aria-hidden="true">
             <div class="sk-bar"><i></i><i></i><i></i></div>
             <div class="sk-body">
-              <div class="sk-desc"><i style="width:52%"></i></div>
-              <div class="sk-tiles">
-                <div class="sk-tile"><b>4</b><span>Songs</span></div>
-                <div class="sk-tile"><b>2</b><span>Albums</span></div>
-                <div class="sk-tile"><b>2</b><span>Favorites</span></div>
+              <div class="sk-note-head">
+                <div class="sk-cover sk-photo"></div>
+                <div class="sk-note-meta">
+                  <div class="sk-desc"><i style="width:78%"></i></div>
+                  <div class="sk-tiles">
+                    <div class="sk-tile"><b>4</b><span>Songs</span></div>
+                    <div class="sk-tile"><b>2</b><span>Albums</span></div>
+                    <div class="sk-tile"><b>2</b><span>Favorites</span></div>
+                  </div>
+                  <div class="sk-field"><b>Listen:</b><span class="sk-linktext">Spotify · Bandcamp · YouTube</span></div>
+                </div>
               </div>
-              <div class="sk-field"><b>Listen:</b><span class="sk-linktext">Spotify · Bandcamp · YouTube</span></div>
               <div class="sk-actions"><span>⟳ Enrich artist metadata</span></div>
               <div>
                 <div class="sk-thead"><span>Song</span><span class="sk-heart off">♡</span><span>Album</span><span>Tuning</span><span>Capo</span></div>
@@ -237,6 +249,17 @@
                 <div class="sk-row"><span class="sk-songcell"><i class="sk-link" style="width:74%"></i><i class="sk-sub"></i></span><span class="sk-heart off">♥</span><span class="sk-album"><span class="sk-thumb"></span><i style="width:66%"></i></span><span class="sk-cell">Standard</span><span class="sk-cell">–</span></div>
                 <div class="sk-row"><i class="sk-link" style="width:48%"></i><span class="sk-heart off">♥</span><span class="sk-album"><span class="sk-thumb"></span><i style="width:58%"></i></span><span class="sk-cell">Standard</span><span class="sk-cell">–</span></div>
                 <div class="sk-row"><i class="sk-link" style="width:56%"></i><span class="sk-heart">♥</span><span class="sk-album"><span class="sk-thumb"></span><i style="width:58%"></i></span><span class="sk-cell">Standard</span><span class="sk-cell">–</span></div>
+              </div>
+              <div class="sk-disco">
+                <b>Discography</b>
+                <span class="sk-cell">Studio albums &amp; EPs · expand for your songs</span>
+                <div class="sk-field"><span class="sk-cell">2016</span><i style="width:34%"></i><span class="sk-cell">(Album) · 3 songs ▾</span></div>
+                <div class="sk-disco-songs">
+                  <i class="sk-link" style="width:52%"></i>
+                  <i class="sk-link" style="width:44%"></i>
+                </div>
+                <div class="sk-field"><span class="sk-cell">2019</span><i style="width:28%"></i><span class="sk-cell">(EP) · 1 song ▸</span></div>
+                <div class="sk-field"><span class="sk-cell">2023</span><i style="width:40%"></i><span class="sk-cell">(Album)</span></div>
               </div>
               <div class="sk-bio">
                 <b>Bio</b>
@@ -249,7 +272,7 @@
               </div>
             </div>
           </div>
-          <figcaption><strong>An artist page</strong> — index of the artist's songs in your archive, basic analytics data, streaming links, and a fetched Wikipedia bio.</figcaption>
+          <figcaption><strong>An artist page</strong> — index of the artist's songs in your archive, basic analytics data, streaming links, the artist's photo, a discography, and a fetched Wikipedia bio.</figcaption>
         </figure>
       </div>
     </div>
@@ -279,7 +302,9 @@
           <h3>Add a song</h3>
           <p>Create a note in <code>Songs/</code>. Use the song title to name the file, fill in Artist
           and Album metadata, add your tab or chords to the body, and run <em>Enrich Song</em> to gather the rest of
-          the metadata. The index and artist page take care of themselves.</p>
+          the metadata. The index and artist page take care of themselves.
+          Archiving your own songs, a friend's band, or anyone not on MusicBrainz? Set
+          <code>Metadata Source: none</code> and fill the note in by hand — everything local still works, the lookup just sits out.</p>
         </li>
       </ol>
       <p class="fine-print">

@@ -150,10 +150,17 @@ was considered and rejected: datacore blocks have no module system and a CDN
 fetch would break offline; tonal has no progression→key detection anyway.
 With Capo set, the Key row also shows the sounding key). `Metadata
 Source` (Text, optional) controls where enrichment looks: absent/
-`musicbrainz` = normal lookup, `none` = unpublished/original music — the
-Enrich hotkey still refreshes the header and syncs the artist page but never
-queries anything, and `enrichArtistPage` honors the same value on artist
-pages. Unknown values are rejected with a notice, not treated as the default.
+`musicbrainz` = normal lookup, `none` = no external database can know about
+this — your own songs, a friend's band, any artist with no official release
+or Wikipedia page. The Enrich hotkey still refreshes the header (or the
+artist block) from whatever's in frontmatter, but never queries anything.
+**This is a per-note property, not inherited or shared**: `enrichArtistPage`
+checks the artist page's OWN `Metadata Source` value, independent of what
+any of that artist's song notes have set — setting it on a song skips
+MusicBrainz for that song only, and setting it on the artist page (separately)
+skips MusicBrainz + Wikipedia there. Both typically get set together for a
+fully local artist, but nothing propagates automatically. Unknown values are
+rejected with a notice, not treated as the default.
 The vault-wide default lives in `DEFAULT_METADATA_SOURCE` at the top of
 `enrichSongNote.js`. **Roadmap (deliberately not built yet):** `discogs` as
 an additional source — it would slot into the same switch; note Discogs'
@@ -619,10 +626,16 @@ Design decisions:
 - **App sketches** are CSS-drawn mockups: real UI furniture text, anonymous
   bars for names/lyrics (no copyrighted content), light-paper in both
   themes; `.sketch-grid` columns are equal-height.
-- **SEO:** canonical + Open Graph + Twitter `summary` card + JSON-LD
-  `SoftwareSourceCode` (author michaelck). No `og:image` yet — the one
-  asset worth adding is a 1200×630 card; until then link previews are
-  text-only.
+- **SEO:** canonical + Open Graph + Twitter `summary_large_image` card +
+  JSON-LD `SoftwareSourceCode` (author michaelck). `og:image` is
+  `docs/og-card.png` — a 1200×630 PNG rendered by headless Chrome from the
+  page's own hero (wordmark + headline + index sketch), referenced by
+  `og:image`/`twitter:image`/JSON-LD `image` at the canonical URL. It's the
+  ONE raster in `docs/` — allowed because it's a metadata asset fetched by
+  social crawlers, not loaded by the page (the page stays self-contained).
+  `docs/` is export-ignored, so it never enters the release zip. To
+  regenerate after a hero redesign: headless Chrome `--window-size=1200,630
+  --force-device-scale-factor=1 --screenshot` against `file://…/index.html`.
 - **A11y:** skip-link, global `:focus-visible` ring, `scroll-margin-top`
   under the sticky header, `text-wrap: balance` on headings,
   `prefers-reduced-motion` honored.

@@ -92,9 +92,13 @@ properties panel.
    a second note — just add another section to the tab.
 4. **Enrich Song** hotkey → confirms the album, fills metadata + cover +
    streaming links, inserts the header, and creates the artist's page if new.
-   **Tracking your own unpublished music?** Add `Metadata Source: none` to
-   the song (and your artist page) — enrichment keeps doing the local work
-   (header, artist page) but never queries MusicBrainz.
+   **Archiving something MusicBrainz/Wikipedia won't have** — your own
+   songs, a friend's band, a local artist with no official release? Add
+   `Metadata Source: none` to the song note. Enrichment still builds the
+   header from whatever you fill in by hand, it just never queries
+   MusicBrainz. This is per-note, not inherited — add the same property to
+   the artist's own page too if you want its enrichment (Wikipedia bio,
+   photo, discography) skipped as well.
 5. On an artist page: **Enrich Artist** hotkey → saves the artist's streaming
    and homepage links from MusicBrainz, then pulls a Wikipedia bio into a
    `## Bio` section and a one-line descriptor shown under the page title

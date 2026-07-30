@@ -523,6 +523,16 @@ h3 { font-size: 1.05rem; margin-bottom: 0.35rem; }
 .sk-text { display: grid; gap: 7px; width: 100%; }
 .sk-text i { height: 7px; border-radius: 4px; background: oklch(0.87 0.015 345); }
 
+/* artist photo: reuses the cover swatch's frame with a cooler, neutral
+   gradient so it reads as a photo rather than album art */
+.sk-photo { background: linear-gradient(135deg, oklch(0.6 0.05 250), oklch(0.52 0.06 320)); }
+
+/* discography: labelled block like the Bio, with album rows (year + name bar
+   + type/toggle) and one album "expanded" to indented song links */
+.sk-disco { display: grid; gap: 6px; }
+.sk-disco b { font-size: 0.78rem; }
+.sk-disco-songs { margin-left: 14px; display: grid; gap: 5px; }
+
 /* side-by-side sketches stretch to the same height: the figure becomes a
    column so the frame absorbs the difference (content stays top-packed)
    and the captions share a baseline */
