@@ -5,7 +5,7 @@ collects notes for the next release; when the maintainer cuts a release,
 retitle the section with the version and paste it into the GitHub release
 description. Planned work lives in [ROADMAP.md](ROADMAP.md).
 
-## v1.3.0 — Unreleased
+## v1.3.0 — 2026-07-28
 
 ### Added
 - The song header's **Artist** now links to that artist's page when one
