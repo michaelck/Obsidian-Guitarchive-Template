@@ -12,6 +12,8 @@ Artists/*
 !Artists/.gitkeep
 Attachments/Covers/*
 !Attachments/Covers/.gitkeep
+Attachments/Photos/*
+!Attachments/Photos/.gitkeep
 
 # Obsidian per-user state — keep the shipped config, not session data
 # (hotkeys.json IS shipped: it pre-binds the Guitarchive commands)

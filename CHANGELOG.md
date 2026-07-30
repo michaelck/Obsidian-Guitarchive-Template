@@ -5,6 +5,48 @@ collects notes for the next release; when the maintainer cuts a release,
 retitle the section with the version and paste it into the GitHub release
 description. Planned work lives in [ROADMAP.md](ROADMAP.md).
 
+## v1.3.0 — Unreleased
+
+### Added
+- The song header's **Artist** now links to that artist's page when one
+  exists (plain text otherwise) — the same cross-linking the index table
+  already does, so you can jump from a song to its artist in one click.
+- Artist photos: Enrich Artist now pulls the artist's Wikipedia lead image
+  (Wikimedia Commons–hosted), stores it in a new `Photo` property, and shows
+  it on the artist page beside the descriptor and stats. Attribution follows
+  the same discipline as cover art — a `PhotoSource` link to the Commons file
+  page (where author and license live). Downloaded images go to
+  `Attachments/Photos/`, kept separate from song covers; set
+  `DOWNLOAD_PHOTOS = false` at the top of `enrichArtistPage.js` to store just
+  the URL. As with covers, keep that folder out of any public repo.
+- Discography on artist pages: Enrich Artist lists the artist's studio albums
+  and EPs from MusicBrainz (compilations, live albums, and remixes excluded),
+  oldest first. Any album you already have songs from expands, right there in
+  the list, to links to your songs — the same toggle as the song header's
+  "more from this album". Works even for artists with no Wikipedia article.
+
+### Changed
+- Song, artist, and now the `Guitarchive.md` dashboard all load their view
+  from a shared component via `dc.require` — the dashboard's view moved to
+  `Templates/Scripts/guitarchive-view.jsx`, completing the shared-component
+  pattern started in v1.2.0. As with the others, this file is load-bearing:
+  when upgrading, copy the **whole** `Templates/Scripts/` folder.
+- `Label` is now a List property (`multitext`). Enrich Song writes every
+  distinct label a release-group appeared on (an album issued on 4AD and
+  reissued on Saddle Creek both), ordered original-label-first, always as a
+  list — same as Genre. Re-run Enrich Song on existing notes to convert a
+  single-string `Label` to the list form.
+
+### Fixed
+- Enrich Song no longer writes `[no label]` as a song's Label. That's
+  MusicBrainz's special-purpose entity for self-published / white-label
+  releases, not a real label — it's now omitted. Previously, when several
+  releases shared the earliest date, the script read one release's label
+  arbitrarily and could surface `[no label]` even when a sibling release on
+  the same date named the real label (e.g. Adrianne Lenker's "Hours Were the
+  Birds", where the CD is `[no label]` but the same-day digital release is on
+  4AD). Re-run Enrich Song on affected notes to pick up the corrected labels.
+
 ## v1.2.0 — 2026-07-28
 
 ### Changed
@@ -26,21 +68,6 @@ description. Planned work lives in [ROADMAP.md](ROADMAP.md).
   without `--dry-run`. Notes created after this change use the stub
   automatically. (Editing a component doesn't hot-reload into already-open
   notes — reopen the note or reload Obsidian to pick up changes.)
-- `Label` is now a List property (`multitext`). Enrich Song writes every
-  distinct label a release-group appeared on (an album issued on 4AD and
-  reissued on Saddle Creek both), ordered original-label-first, always as a
-  list — same as Genre. Re-run Enrich Song on existing notes to convert a
-  single-string `Label` to the list form.
-
-### Fixed
-- Enrich Song no longer writes `[no label]` as a song's Label. That's
-  MusicBrainz's special-purpose entity for self-published / white-label
-  releases, not a real label — it's now omitted. Previously, when several
-  releases shared the earliest date, the script read one release's label
-  arbitrarily and could surface `[no label]` even when a sibling release on
-  the same date named the real label (e.g. Adrianne Lenker's "Hours Were the
-  Birds", where the CD is `[no label]` but the same-day digital release is on
-  4AD). Re-run Enrich Song on affected notes to pick up the corrected labels.
 
 ## v1.1.0 — 2026-07-19
 

@@ -20,7 +20,9 @@ function SongHeader({ dc }) {
         : String(coverSource).includes("unsplash") ? "Unsplash"
         : hostnameOf(coverSource))
         : null;
-    const artist = dc.coerce.array(page.value("Artist") ?? []).join(", ");
+    // string-coerce + trim each artist (YAML can hand back numbers/null), drop
+    // blanks — kept as an array so each can link to its Artists/ page
+    const artists = dc.coerce.array(page.value("Artist") ?? []).map(a => String(a ?? "").trim()).filter(Boolean);
     const album = dc.coerce.array(page.value("Album") ?? []).join(", ");
     const genre = dc.coerce.array(page.value("Genre") ?? []).join(", ");
     const year = page.value("Release Year");
@@ -42,6 +44,17 @@ function SongHeader({ dc }) {
     const [keyStatus, setKeyStatus] = dc.useState("");
     const albumMbid = page.value("Album MBID");
     const [showMoreFromAlbum, setShowMoreFromAlbum] = dc.useState(false);
+
+    // artist name -> Artists/ page link, so the Artist row can link to an
+    // artist's page when one exists (matched via the page's Name property, the
+    // exact artist string; same map Guitarchive builds). Names without a page
+    // render as plain text rather than broken links.
+    const artistPages = dc.useQuery('@page and path("Artists")');
+    const artistLinks = dc.useMemo(() => {
+        const map = new Map();
+        for (const p of artistPages) map.set(String(p.value("Name") ?? p.$name), p.$link);
+        return map;
+    }, [artistPages]);
 
     // "More from this album": other vault songs sharing this note's Album
     // MBID, queried live (no network). Hides entirely when Album MBID is
@@ -221,7 +234,20 @@ function SongHeader({ dc }) {
                     {version && (
                         <div style={{ fontSize: "0.9em", color: "var(--text-muted)", fontStyle: "italic" }}>{version}</div>
                     )}
-                    {artist && <div><strong>Artist:</strong> {artist}</div>}
+                    {artists.length > 0 && (
+                        <div>
+                            <strong>Artist:</strong>{" "}
+                            {artists.map((a, i) => {
+                                const link = artistLinks.get(a);
+                                return (
+                                    <span key={a}>
+                                        {i > 0 ? ", " : ""}
+                                        {link ? <dc.Link link={link.withDisplay(a)} /> : a}
+                                    </span>
+                                );
+                            })}
+                        </div>
+                    )}
                     {albumLine && (
                         <div>
                             <div><strong>Album:</strong> {albumLine}</div>

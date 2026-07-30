@@ -24,6 +24,9 @@
     "Name": "text",
     "MBID": "text",
     "Wikipedia": "text",
+    "Photo": "text",
+    "PhotoSource": "text",
+    "Discography": "multitext",
     "autoscroll-speed": "number",
     "Album MBID": "text"
   }

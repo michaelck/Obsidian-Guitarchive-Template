@@ -116,30 +116,80 @@ Release chores for v1.1.0:
       warning's permanent home is now the README's Upgrading section;
       CHANGELOG's upgrade note echoes it and points there.
 
-Later / bigger (not in v1.1.0):
+**v1.3.0 — planned feature batch (July 2026).** Two artist-page enrichment
+features plus finishing the shared-component refactor. Ships as one release
+straight after v1.2.0 (no v1.2.1 cut) — it also carries the already-merged
+Label-as-list change. Hard contract (same as v1.1.0): `Metadata
+Source: none` must suppress every new lookup and write below. Artist pages
+already use the loader stub (v1.2.0), so render changes to
+`artist-page-view.jsx` need NO migration. Suggested order: Guitarchive stub
+first (isolated, low-risk), then photo + discography together (both touch
+`enrichArtistPage.js` and the artist page, so one pass).
+
+- [x] Artist photo from the Wikipedia lead image. (Done: no Commons imageinfo call needed — the summary URL shape gives Commons detection + file-page attribution directly.) The Wikipedia REST summary
+      already fetched in `enrichArtistPage` carries `originalimage`/`thumbnail`
+      (Commons URLs), so the photo URL is free — only license + photographer
+      attribution needs an extra Commons `imageinfo` call
+      (`iiprop=extmetadata`; read `LicenseShortName` + `Artist`, and STRIP HTML
+      from the Artist field — it contains markup). Store to a NEW
+      `Attachments/Photos/` folder — kept SEPARATE from covers (decision, July
+      2026) — with the path in a `Photo` property and the Commons file-page URL
+      in `PhotoSource` (mirrors Cover/CoverSource). Reuse the `downloadCover`
+      machinery, generalized to `downloadImage(url, baseName, folder)`; on
+      download failure or DOWNLOAD flag off, store the remote URL. Render in
+      `artist-page-view.jsx` to the left of the Description/stat-tile row
+      (mirror the song-header cover block), resolving local paths via the
+      existing `coverSrc` helper, with an attribution caption "Photo: {author},
+      {license}, via Wikimedia Commons" linking `PhotoSource`.
+      `Photo`/`PhotoSource` → `text` in types.json; `Attachments/Photos/*`
+      gitignored with a `.gitkeep` (never commit downloaded images — same rule
+      as covers). Tests: Commons filename extraction from URL, extmetadata
+      license/author parse + HTML strip, `Photo`/`PhotoSource` written, and
+      `Metadata Source: none` suppresses it.
+- [x] Discography on artist pages. Browse
+      `release-group?artist=<mbid>&type=album|ep` (paginate via `offset` for
+      prolific artists), filter to primary-type Album/EP with NO secondary
+      types (drops comps/live/bootlegs), sort by first-release-date.
+      Deviation from plan: first built as a static `## Discography` markdown
+      section (Bio-style), then moved to a `Discography` frontmatter list
+      (encoded `year|title|type|rgid`) rendered by the artist block — a static
+      section can't host the expand-to-your-songs accordion the maintainer
+      wanted, and the block matches in-vault albums live (rgid === a song's
+      `Album MBID`) with the same `useState` toggle as the song header's "more
+      from this album", so it's never stale. `Album Type` (v1.1.0) was added
+      for exactly this. Tests: secondary-type filter, date sort, delimiter
+      safety, pagination, and the frontmatter write end-to-end.
+- [x] Finish the shared-component refactor: give `Guitarchive.md` the
+      loader-stub treatment. Extract its inline block (from `return function
+      View()`) into `Templates/Scripts/guitarchive-view.jsx` exporting
+      `{ Guitarchive }` and taking a `dc` prop — same transform as the
+      song/artist components — and replace the block with the 4-line stub. Edit
+      Guitarchive.md DIRECTLY (single shipped file, not per-note content, so no
+      migration needed here; downstream vaults get it by copying the updated
+      file + the new `.jsx`). Repoint `graceful-failover.test.js`'s Guitarchive
+      Artist-explode slice to `extractComponent("guitarchive-view.jsx")`; add
+      the file to `block-syntax.test.js` and to the load-bearing-files note in
+      README/CLAUDE. Optional: a Guitarchive.md entry in `migrate-blocks.js`
+      for downstream symmetry (needs a Guitarchive-unique marker — the
+      `toggleFavorite` comment or the `path("Artists")` query line). Also
+      unblocks the render harness below.
+
+Docs/release for v1.3.0: CLAUDE.md (schema `Photo`/`PhotoSource` + Discography;
+`enrichArtistPage` + Guitarchive design summaries; add `guitarchive-view.jsx`
+to the shared-components section), CHANGELOG v1.3.0, README feature list,
+types.json, .gitignore. Then `node --test "tools/tests/*.test.js"` + one live
+smoke test per enrichment feature.
+
+Later / bigger (not in v1.3.0):
 - Datacore render harness: stub the full `dc` API (`useQuery`, `useState`,
   `Table`, `Link`…) over preact and actually invoke the components against
   fixture pages — would let tests catch render-path regressions
   (compact-layout collapse, favorite toggle, unknown-artist rows), not just
   syntax. Now more tractable: `song-header-view.jsx` / `artist-page-view.jsx`
-  export named components (`SongHeader`, `ArtistPage`) that a harness can
-  `require`-eval and invoke with a stubbed `dc` prop, instead of slicing
+  (and `guitarchive-view.jsx` once split) export named components a harness
+  can `require`-eval and invoke with a stubbed `dc` prop, instead of slicing
   regions out by anchor string. Big lift; only worth it if component bugs
   keep slipping past the syntax/scorer tests.
-- Give `Guitarchive.md` the same loader-stub treatment as song/artist notes.
-  It's the last remaining inline datacorejsx block (its own single note, so
-  no per-note duplication pain — lower priority), but moving its view into a
-  shared `guitarchive-view.jsx` would unify the pattern and let the same
-  render harness cover it. `graceful-failover.test.js`'s Guitarchive.md
-  Artist-explode slice would repoint to that file.
-- Artist photo from the Wikipedia lead image — needs a Commons `imageinfo`
-  call for license + photographer attribution (`Photo`/`PhotoSource`
-  properties, same discipline as `CoverSource`; reuse the
-  download-to-Attachments machinery).
-- `## Discography` section on artist pages — browse the artist's MB
-  release-groups (filter to primary-type Album/EP with no secondary types
-  to exclude bootlegs/compilations; paginate), insert above `## Notes`
-  Bio-style, mark which albums have songs in the vault.
 - Discogs as an alternative `Metadata Source` — see CLAUDE.md's schema
   section.
 - Ship `.obsidian/app.json` with `showInlineTitle: false` — the song/artist

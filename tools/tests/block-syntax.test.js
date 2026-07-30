@@ -42,6 +42,10 @@ test("artist-page-view.jsx is syntactically valid JSX", () => {
 	assertParses("artist-page-view.jsx", extractComponent(path.join(scriptsDir, "artist-page-view.jsx")));
 });
 
+test("guitarchive-view.jsx is syntactically valid JSX", () => {
+	assertParses("guitarchive-view.jsx", extractComponent(path.join(scriptsDir, "guitarchive-view.jsx")));
+});
+
 test("SONG_HEADER_BLOCK loader stub is syntactically valid JSX", () => {
 	assertStubParses("SONG_HEADER_BLOCK", extractArray(path.join(scriptsDir, "enrichSongNote.js"), "SONG_HEADER_BLOCK"));
 });

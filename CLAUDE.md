@@ -25,6 +25,7 @@ guitarchive-template/            # ← repo root = vault root
 │   └── Scripts/                 # Templater "Script files folder location"
 │       ├── song-header-view.jsx # SHARED song-header component, dc.require'd by every song note's stub
 │       ├── artist-page-view.jsx # SHARED artist-page component, dc.require'd by every artist page's stub
+│       ├── guitarchive-view.jsx # SHARED dashboard component, dc.require'd by Guitarchive.md's stub
 │       ├── enrichSongNote.js    # user script: MusicBrainz enrichment
 │       ├── Enrich Song.md       # trigger template: <%* await tp.user.enrichSongNote(tp) %>
 │       ├── syncArtistPages.js   # user script: create missing Artists/ pages
@@ -164,11 +165,25 @@ artist string as it appears in song frontmatter), plus, once enriched, `MBID`
 (Text — MusicBrainz artist id, lets re-runs skip the search/picker),
 `Wikipedia` (Text — article URL), `Listen` (List — streaming links plus the
 official homepage from the artist's MB url-rels; same https-only domain
-whitelist as songs, deliberately no social links), and `Description` (Text —
+whitelist as songs, deliberately no social links), `Description` (Text —
 Wikipedia's one-line descriptor, rendered by the page block as a muted
-subtitle above the stat tiles). Song matching is done against `Name`, never
+subtitle above the stat tiles), `Photo` (Text — the artist's Wikipedia lead
+image, either a remote URL or a vault path like `Attachments/Photos/<Name>.jpg`;
+same Cover-style Text-or-path handling), `PhotoSource` (Text — link to the
+Wikimedia Commons file page, where author + license live; parallels
+`CoverSource`) and `Discography` (List — the artist's MusicBrainz Album/EP
+release-groups, each encoded as a compact `year|title|type|rgid` string; the
+artist page block parses these and renders them, with a live
+expand-to-your-songs toggle on any release-group the vault has songs from.
+Stored as data, not a body section, so the block can offer that toggle — and
+it's `multitext`, hidden by the artist-note properties CSS in reading view).
+Song matching is done against `Name`, never
 against the filename, because filenames are sanitized (`/`, `:` etc.
 replaced) while `Name` stays literal.
+
+Artist pages also carry the Wikipedia `## Bio` as a managed markdown section
+written by enrichment, kept above a hand-written `## Notes` (see
+`enrichArtistPage.js` below).
 
 Obsidian property types are limited to Text, List, Number, Checkbox, Date, Date
 & time, Tags — nothing else. Properties never render Markdown: a bare `-`
@@ -203,6 +218,15 @@ list item and needs `render: value => <>{value}</>` to bypass that.
   (auto-runs inside Enrich Song).
 
 ## `Guitarchive.md` design summary
+
+Since v1.3.0 `Guitarchive.md` is a loader stub like song/artist notes: its
+body just `dc.require`s `Templates/Scripts/guitarchive-view.jsx` (exports
+`{ Guitarchive }`, takes a `dc` prop) — the dashboard view lives there now, so
+edit that file to change it (see "Shared header/artist components" below). It's
+a single shipped file, not per-note content, so no block migration was needed
+— it was edited directly, and downstream vaults pick it up by copying the
+updated `Guitarchive.md` plus the new `.jsx`. The description below is of that
+component's behavior.
 
 The index note is named `Guitarchive.md` (was called `tablature-index.md` in
 early planning). Above the table it shows a dashboard row of stat tiles
@@ -346,7 +370,10 @@ MusicBrainz wasn't queried. It's now a tiny **loader stub** — it
 and renders it (see "Shared header/artist components" below); the component
 only renders rows for fields that actually have values, so a bare note with
 just Artist/Song/Tuning/Capo gets a clean 4-line header instead of a wall of
-"-" placeholders, and fills in more rows as fields get populated later.
+"-" placeholders, and fills in more rows as fields get populated later. The
+Artist row links each artist to its `Artists/` page when one exists (a
+`Name`→`$link` map from a `path("Artists")` query, exactly like Guitarchive;
+names without a page render as plain text), so you can jump song → artist.
 
 Gotcha: `insertSongHeader` skips notes whose body already contains
 `song-header-view.jsx` (the new stub) **or** `dc.useCurrentFile()` (a legacy
@@ -411,10 +438,10 @@ one-time inline→stub migration (`tools/migrate-blocks.js`).
 
 ## Shared header/artist components (`dc.require`) — July 2026
 
-The song header and artist page components live in their own files —
-`Templates/Scripts/song-header-view.jsx` (exports `{ SongHeader }`) and
-`artist-page-view.jsx` (exports `{ ArtistPage }`) — and each note's body is a
-4-line loader stub that pulls the component in at render time:
+The view components live in their own files — `Templates/Scripts/song-header-view.jsx`
+(exports `{ SongHeader }`), `artist-page-view.jsx` (exports `{ ArtistPage }`),
+and `guitarchive-view.jsx` (exports `{ Guitarchive }`, added v1.3.0) — and each
+note's body is a 4-line loader stub that pulls the component in at render time:
 
 ```datacorejsx
 const { SongHeader } = await dc.require(dc.fileLink("Templates/Scripts/song-header-view.jsx"));
@@ -529,6 +556,44 @@ else `wikidata` rel → QID → enwiki sitelink) → Wikipedia REST summary
   fallback, since matching articles by bare name risks grabbing the wrong
   subject. Workaround: add the missing URL relationship to MusicBrainz
   itself, then re-run.
+- **Artist photo** (added v1.3.0): the Wikipedia REST summary already carries
+  the lead image (`originalimage`/`thumbnail`), so no extra API call is
+  needed — a URL under `/wikipedia/commons/` is Commons-hosted, which makes
+  its `File:` description page a reliable attribution target built straight
+  from the filename (author + license live there). Non-Commons (local-wiki)
+  images are skipped rather than mis-attributed. The thumbnail rendition is
+  stored (a page photo doesn't need the multi-megapixel original).
+  `downloadImage` (a folder-generalized copy of the song script's
+  `downloadCover`; `DOWNLOAD_PHOTOS` flag, default on) saves it to
+  **`Attachments/Photos/`** — deliberately separate from song covers
+  (`Attachments/Covers/`) — writing the vault path to `Photo` and the Commons
+  file-page URL to `PhotoSource`; on download failure the remote URL is stored
+  instead. The artist block renders it left of the descriptor/stat-tiles
+  (mirroring the song-header cover) with a "Photo © respective rights holder,
+  via Wikimedia Commons" caption. Deviation from the original plan: no Commons
+  `imageinfo` call — the summary + URL-shape give everything needed, one fewer
+  request. `Attachments/Photos/*` is gitignored (never commit downloaded
+  images — same rule as covers).
+- **Discography** (added v1.3.0): stored as the `Discography` frontmatter list
+  (not a body section) so the artist page block can render it with a live
+  expand-to-your-songs toggle per owned album — the same `useState` pattern as
+  the song header's "more from this album". `getArtistReleaseGroups` browses
+  `release-group?artist=<mbid>&type=album|ep` (paginated via `offset`);
+  `buildDiscographyList` keeps primary-type Album/EP with **no secondary
+  types** (drops compilations/live/remixes/bootlegs), sorts by
+  first-release-date, and encodes each as `year|title|type|rgid` (pipes in
+  titles swapped to `/` so they can't break the delimiter). The block does the
+  in-vault matching live (rgid === a song's `Album MBID`), so it's never stale.
+  Runs off the MBID **before** the Wikipedia chain, so an artist with no
+  article still gets a discography. Deviation from the original plan: it was
+  first built as a static `## Discography` markdown section, then moved to
+  frontmatter + block rendering so the expand toggle could work like the song
+  header (a static Markdown section can't host an interactive accordion).
+- Section ordering is handled by `upsertSection(content, heading, body)`
+  (`upsertBioSection` is a thin wrapper over it): it replaces a section in
+  place, or inserts it before the first later section in `SECTION_ORDER`
+  (`## Bio` → `## Notes`) that's present. Only Bio is a managed body section
+  now; discography moved to frontmatter.
 
 ## `docs/` one-pager site
 

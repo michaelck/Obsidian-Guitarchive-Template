@@ -11,13 +11,11 @@
 // on ROADMAP.md for actual render-path testing).
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
 const path = require("node:path");
 const { transform } = require("sucrase");
 const { extractComponent } = require("../extract-blocks");
 
 const scriptsDir = path.join(__dirname, "../../Templates/Scripts");
-const repoRoot = path.join(__dirname, "../..");
 
 function evalSlice(slice, returnExpr) {
 	const wrapped = `(function() {\n${slice}\nreturn ${returnExpr};\n})()`;
@@ -66,24 +64,21 @@ for (const [label, file] of [
 	});
 }
 
-// --- Unknown Artist fallback: Guitarchive.md's datacorejsx block ---
+// --- Unknown Artist fallback: the Guitarchive dashboard component ---
 //
-// Not extracted via extractArray — Guitarchive.md embeds the block directly
-// as a fenced datacorejsx block, not a `const NAME = [...]` array literal
-// like the Templater scripts, so it's pulled out with the same fence regex
-// extract-blocks.js's CLI branch already uses to check New Song.md's embed.
+// Guitarchive.md is now a loader stub; the dashboard view lives in
+// guitarchive-view.jsx (same shared-component split as song/artist notes), so
+// the Artist-explode flatMap is sliced out of that file by anchor string, the
+// same way key-detection/hostnameOf are pulled from their components.
 
 function loadExplodeArtists() {
-	const md = fs.readFileSync(path.join(repoRoot, "Guitarchive.md"), "utf8");
-	const m = md.match(/```datacorejsx\n([\s\S]*?)\n```/);
-	assert.ok(m, "no datacorejsx block found in Guitarchive.md");
-	const raw = m[1];
+	const raw = extractComponent(path.join(scriptsDir, "guitarchive-view.jsx"));
 	const marker = ".flatMap(page => {";
 	const start = raw.indexOf(marker);
-	assert.ok(start >= 0, "Artist-explode flatMap not found in Guitarchive.md — did the block move or get restructured?");
+	assert.ok(start >= 0, "Artist-explode flatMap not found in guitarchive-view.jsx — did it move or get restructured?");
 	const bodyStart = start + marker.length;
 	const end = raw.indexOf("\n            }),", bodyStart);
-	assert.ok(end > bodyStart, "end of Artist-explode flatMap not found in Guitarchive.md");
+	assert.ok(end > bodyStart, "end of Artist-explode flatMap not found in guitarchive-view.jsx");
 	const body = raw.slice(bodyStart, end);
 	return evalSlice(`const explodeArtists = function(page, dc) {\n${body}\n};`, "explodeArtists");
 }

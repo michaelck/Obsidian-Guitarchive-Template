@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const { installGlobals, installFetch, notices } = require("./obsidian-fakes");
 
 const script = require("../../Templates/Scripts/enrichArtistPage.js");
-const { wikipediaTitle, upsertBioSection, artistListenLinks } = script.__test__;
+const { wikipediaTitle, upsertBioSection, upsertSection, artistListenLinks, commonsFileName, resolveArtistPhoto, getArtistReleaseGroups, buildDiscographyList } = script.__test__;
 
 // --- upsertBioSection ---
 
@@ -122,6 +122,10 @@ test("enrichArtistPage writes Listen, Wikipedia, Description and upserts the bio
 			description: "American singer-songwriter",
 			content_urls: { desktop: { page: "https://en.wikipedia.org/wiki/Kevin_Morby" } },
 		}],
+		["/ws/2/release-group?artist=mbid-km", {
+			"release-group-count": 1,
+			"release-groups": [{ id: "rg-1", title: "Singing Saw", "primary-type": "Album", "first-release-date": "2016-04-15" }],
+		}],
 	]);
 
 	await script({});
@@ -131,6 +135,8 @@ test("enrichArtistPage writes Listen, Wikipedia, Description and upserts the bio
 	assert.deepEqual(fm.Listen, ["https://open.spotify.com/artist/km", "https://kevinmorby.com"]);
 	assert.equal(fm.Wikipedia, "https://en.wikipedia.org/wiki/Kevin_Morby");
 	assert.equal(fm.Description, "American singer-songwriter");
+	// discography saved as a frontmatter list for the block to render
+	assert.deepEqual(fm.Discography, ["2016|Singing Saw|Album|rg-1"]);
 	assert.ok(app.contents[PAGE_PATH].includes("## Bio"));
 	assert.ok(app.contents[PAGE_PATH].includes("Kevin Robert Morby"));
 	assert.ok(app.contents[PAGE_PATH].includes("## Notes\nmy notes"));
@@ -160,4 +166,103 @@ test("enrichArtistPage with Metadata Source: none neither fetches nor writes", a
 
 	assert.deepEqual(fm, { Name: "Morby, Kevin", "Metadata Source": "none" });
 	assert.match(notices.at(-1), /Metadata Source: none/);
+});
+
+// --- artist photo: commonsFileName + resolveArtistPhoto ---
+
+const COMMONS_ORIGINAL = "https://upload.wikimedia.org/wikipedia/commons/d/d9/Adrianne_Lenker.jpg";
+const COMMONS_THUMB = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Adrianne_Lenker.jpg/330px-Adrianne_Lenker.jpg";
+
+test("commonsFileName extracts the File name from full-size and thumbnail URLs", () => {
+	assert.equal(commonsFileName(COMMONS_ORIGINAL), "Adrianne_Lenker.jpg");
+	assert.equal(commonsFileName(COMMONS_THUMB), "Adrianne_Lenker.jpg");
+	// percent-encoded names are decoded
+	assert.equal(
+		commonsFileName("https://upload.wikimedia.org/wikipedia/commons/d/d9/Adrianne_Lenker_%2853914800251%29.jpg"),
+		"Adrianne_Lenker_(53914800251).jpg"
+	);
+});
+
+test("commonsFileName returns null for a non-Commons or unparseable URL", () => {
+	assert.equal(commonsFileName("https://upload.wikimedia.org/wikipedia/en/a/ab/Local.jpg"), null);
+	assert.equal(commonsFileName("not a url"), null);
+});
+
+test("resolveArtistPhoto downloads the Commons image and links its file page", async () => {
+	installGlobals();
+	// binary-capable fetch stub so downloadImage succeeds (writeBinary is a no-op fake)
+	global.fetch = async () => ({ ok: true, status: 200, arrayBuffer: async () => new ArrayBuffer(4), headers: { get: () => "image/jpeg" } });
+
+	const photo = await resolveArtistPhoto({ originalimage: { source: COMMONS_ORIGINAL }, thumbnail: { source: COMMONS_THUMB } }, "Lenker, Adrianne");
+	assert.equal(photo.source, "https://commons.wikimedia.org/wiki/File:Adrianne_Lenker.jpg");
+	assert.equal(photo.image, "Attachments/Photos/Lenker, Adrianne.jpg"); // stored in its own folder, not Covers
+});
+
+test("resolveArtistPhoto keeps the remote URL when the download fails", async () => {
+	installGlobals();
+	global.fetch = async () => { throw new Error("network down"); };
+
+	const photo = await resolveArtistPhoto({ thumbnail: { source: COMMONS_THUMB } }, "Lenker, Adrianne");
+	assert.equal(photo.image, COMMONS_THUMB); // fell back to the remote URL
+	assert.equal(photo.source, "https://commons.wikimedia.org/wiki/File:Adrianne_Lenker.jpg");
+});
+
+test("resolveArtistPhoto returns null for a non-Commons image or no image at all", async () => {
+	installGlobals();
+	installFetch([]); // must not fetch — non-Commons images are skipped outright
+	assert.equal(await resolveArtistPhoto({ originalimage: { source: "https://upload.wikimedia.org/wikipedia/en/a/ab/Local.jpg" } }, "X"), null);
+	assert.equal(await resolveArtistPhoto({}, "X"), null);
+});
+
+// --- discography: buildDiscographySection + getArtistReleaseGroups + upsertSection ---
+
+test("buildDiscographyList keeps Album/EP with no secondary types, sorts by year, encodes year|title|type|id", () => {
+	const groups = [
+		{ id: "rg-b", title: "Second Album", "primary-type": "Album", "first-release-date": "2020-05-01" },
+		{ id: "rg-a", title: "First EP", "primary-type": "EP", "first-release-date": "2016" },
+		{ id: "rg-comp", title: "Best Of", "primary-type": "Album", "secondary-types": ["Compilation"], "first-release-date": "2022" },
+		{ id: "rg-single", title: "A Single", "primary-type": "Single", "first-release-date": "2015" },
+	];
+	assert.deepEqual(buildDiscographyList(groups), [
+		"2016|First EP|EP|rg-a",
+		"2020|Second Album|Album|rg-b",
+	]);
+	// compilation and single are excluded
+});
+
+test("buildDiscographyList returns an empty list when nothing qualifies", () => {
+	assert.deepEqual(buildDiscographyList([{ id: "x", title: "Live", "primary-type": "Album", "secondary-types": ["Live"] }]), []);
+	assert.deepEqual(buildDiscographyList([]), []);
+});
+
+test("buildDiscographyList swaps pipes in titles so they can't break the delimiter", () => {
+	const [entry] = buildDiscographyList([{ id: "x", title: "A|B", "primary-type": "Album", "first-release-date": "2000" }]);
+	assert.equal(entry, "2000|A/B|Album|x");
+	assert.equal(entry.split("|").length, 4); // still exactly four fields
+});
+
+test("getArtistReleaseGroups paginates until every release-group is fetched", async () => {
+	global.fetch = async (url) => {
+		const offset = Number(new URL(url).searchParams.get("offset"));
+		const page = offset === 0
+			? Array.from({ length: 100 }, (_, i) => ({ id: `a${i}`, title: `A${i}`, "primary-type": "Album", "first-release-date": "2000" }))
+			: Array.from({ length: 50 }, (_, i) => ({ id: `b${i}`, title: `B${i}`, "primary-type": "Album", "first-release-date": "2001" }));
+		return { ok: true, status: 200, json: async () => ({ "release-group-count": 150, "release-groups": page }) };
+	};
+	const groups = await getArtistReleaseGroups("mbid");
+	assert.equal(groups.length, 150);
+});
+
+test("upsertSection inserts a managed section above ## Notes", () => {
+	const content = upsertSection("intro\n\n## Notes\nmine\n", "## Bio", "## Bio\n\nbio\n");
+	assert.ok(content.indexOf("## Bio") < content.indexOf("## Notes"), "Bio should precede Notes");
+	assert.ok(content.includes("## Notes\nmine"), "hand-written Notes preserved");
+});
+
+test("upsertSection replaces a section in place without duplicating", () => {
+	const before = "## Bio\n\nold\n\n## Notes\nmine\n";
+	const after = upsertSection(before, "## Bio", "## Bio\n\nfresh\n");
+	assert.equal(after.match(/## Bio/g).length, 1);
+	assert.ok(after.includes("fresh"));
+	assert.ok(!after.includes("old"));
 });

@@ -63,6 +63,15 @@ const StatTile = ({ value, label }) => (
     const description = current.value("Description");
     const listen = dc.coerce.array(current.value("Listen") ?? []).map(String);
 
+    // artist photo (Wikipedia lead image, written by Enrich Artist) — local
+    // path or remote URL, resolved the same way as covers; PhotoSource links
+    // the Commons file page (author + license live there)
+    const photo = current.value("Photo");
+    const photoSource = current.value("PhotoSource");
+    const photoSourceLabel = photoSource
+        ? (String(photoSource).includes("commons.wikimedia.org") ? "Wikimedia Commons" : hostnameOf(photoSource))
+        : null;
+
     // compact (two-column) layout whenever the pane is actually narrow —
     // measured with a ResizeObserver on the block's own container, so a
     // squeezed desktop window collapses just like a phone does
@@ -112,6 +121,32 @@ const StatTile = ({ value, label }) => (
             favorites: mine.filter(page => page.value("Favorite") === true).length,
         };
     }, [pages, name]);
+
+    // Discography (stored by Enrich Artist as a "year|title|type|rgid" list).
+    // For each release-group the vault has songs from — matched on rgid ===
+    // a song's Album MBID — we attach the live song list so the row can expand
+    // to it, the same pattern as the song header's "more from this album".
+    const [expandedAlbums, setExpandedAlbums] = dc.useState({});
+    const discography = dc.useMemo(() => {
+        return dc.coerce.array(current.value("Discography") ?? []).map(String).map(entry => {
+            const [year, title, type, id] = entry.split("|");
+            const songs = pages
+                .filter(p => String(p.value("Album MBID") ?? "") === id
+                    && dc.coerce.array(p.value("Artist") ?? []).map(String).includes(name))
+                .map(p => {
+                    const song = String(p.value("Song") ?? p.$name);
+                    const trackNum = parseInt(String(p.value("Track") ?? ""), 10);
+                    return { path: p.$path, link: p.$link.withDisplay(song), song, version: p.value("Version"), trackNum: Number.isFinite(trackNum) ? trackNum : null };
+                })
+                .sort((a, b) =>
+                    a.trackNum !== null && b.trackNum !== null ? a.trackNum - b.trackNum
+                    : a.trackNum !== null ? -1
+                    : b.trackNum !== null ? 1
+                    : a.song.localeCompare(b.song)
+                );
+            return { year, title, type, id, songs };
+        });
+    }, [current, pages, name]);
 
     const COLUMNS = [
         {
@@ -208,22 +243,40 @@ const StatTile = ({ value, label }) => (
 
     return (
         <div ref={measureRef}>
-            {description && (
-                <div style={{ fontSize: "0.9em", color: "var(--text-muted)", fontStyle: "italic", marginBottom: "10px" }}>{description}</div>
-            )}
-            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginBottom: "12px" }}>
-                <StatTile value={stats.songs} label={stats.songs === 1 ? "Song" : "Songs"} />
-                <StatTile value={stats.albums} label={stats.albums === 1 ? "Album" : "Albums"} />
-                <StatTile value={stats.favorites} label={stats.favorites === 1 ? "Favorite" : "Favorites"} />
-            </div>
-            {listen.length > 0 && (
-                <div style={{ marginBottom: "10px" }}>
-                    <strong>Listen:</strong>{" "}
-                    {listen.map((url, i) => (
-                        <span key={url}>{i > 0 ? " · " : ""}<a href={url}>{serviceName(url)}</a></span>
-                    ))}
+            {/* photo (when present) sits to the left of the descriptor + stats,
+                mirroring the cover-left layout of the song header */}
+            <div style={{ display: "flex", gap: "1.5em", alignItems: "flex-start", flexWrap: "wrap", marginBottom: "12px" }}>
+                {photo && (
+                    <div style={{ flexShrink: 0 }}>
+                        <img
+                            src={coverSrc(photo)}
+                            style={{ width: "120px", height: "120px", objectFit: "cover", borderRadius: "6px" }}
+                        />
+                        <div style={{ fontSize: "0.75em", color: "var(--text-muted)", marginTop: "0.25em", maxWidth: "120px" }}>
+                            Photo © respective rights holder
+                            {photoSourceLabel && <>, via <a href={photoSource}>{photoSourceLabel}</a></>}
+                        </div>
+                    </div>
+                )}
+                <div style={{ flex: "1 1 260px", minWidth: 0 }}>
+                    {description && (
+                        <div style={{ fontSize: "0.9em", color: "var(--text-muted)", fontStyle: "italic", marginBottom: "10px" }}>{description}</div>
+                    )}
+                    <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginBottom: "12px" }}>
+                        <StatTile value={stats.songs} label={stats.songs === 1 ? "Song" : "Songs"} />
+                        <StatTile value={stats.albums} label={stats.albums === 1 ? "Album" : "Albums"} />
+                        <StatTile value={stats.favorites} label={stats.favorites === 1 ? "Favorite" : "Favorites"} />
+                    </div>
+                    {listen.length > 0 && (
+                        <div style={{ marginBottom: "10px" }}>
+                            <strong>Listen:</strong>{" "}
+                            {listen.map((url, i) => (
+                                <span key={url}>{i > 0 ? " · " : ""}<a href={url}>{serviceName(url)}</a></span>
+                            ))}
+                        </div>
+                    )}
                 </div>
-            )}
+            </div>
             {canEnrich && (
                 <div style={{ fontSize: "0.85em", color: "var(--text-muted)", marginBottom: "10px" }}>
                     <a onClick={() => dc.app.commands.executeCommandById(ENRICH_COMMAND)} style={{ cursor: "pointer" }}>⟳ Enrich artist metadata</a>
@@ -234,6 +287,36 @@ const StatTile = ({ value, label }) => (
             <div style={{ overflowX: "auto" }}>
                 <dc.Table columns={compact ? COMPACT_COLUMNS : COLUMNS} rows={songs} />
             </div>
+            {discography.length > 0 && (
+                <div style={{ marginTop: "1.5em" }}>
+                    <h2 style={{ fontSize: "1.2em", marginBottom: "0.1em" }}>Discography</h2>
+                    <div style={{ fontSize: "0.85em", color: "var(--text-muted)", marginBottom: "8px" }}>
+                        Studio albums &amp; EPs from MusicBrainz. Expand the ones you have for your songs.
+                    </div>
+                    {discography.map(album => (
+                        <div key={album.id} style={{ marginBottom: "0.15em" }}>
+                            <div>
+                                {album.year || "—"} — {album.title} <span style={{ color: "var(--text-muted)" }}>({album.type})</span>
+                                {album.songs.length > 0 && (
+                                    <>
+                                        {" · "}
+                                        <a onClick={() => setExpandedAlbums(e => ({ ...e, [album.id]: !e[album.id] }))} style={{ cursor: "pointer", color: "var(--text-muted)" }}>
+                                            {album.songs.length} {album.songs.length === 1 ? "song" : "songs"} {expandedAlbums[album.id] ? "▾" : "▸"}
+                                        </a>
+                                    </>
+                                )}
+                            </div>
+                            {expandedAlbums[album.id] && (
+                                <div style={{ marginLeft: "1.2em", marginTop: "0.2em", marginBottom: "0.4em", fontSize: "0.9em" }}>
+                                    {album.songs.map(s => (
+                                        <div key={s.path}>{s.trackNum !== null ? `${s.trackNum}. ` : ""}<dc.Link link={s.link} />{s.version && <span style={{ color: "var(--text-muted)" }}> · {s.version}</span>}</div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

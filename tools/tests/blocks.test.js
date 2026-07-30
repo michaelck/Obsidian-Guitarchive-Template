@@ -29,9 +29,17 @@ test("New Song.md embeds an up-to-date copy of SONG_HEADER_BLOCK", () => {
 // file) silently breaks every note's header. Guard both halves — the path the
 // stub names must exist, and the file must export the component the stub
 // destructures.
+// Guitarchive.md carries its loader stub as a fenced block (not a constant),
+// so pull it out with the same fence regex used elsewhere.
+const guitarchiveStub = (() => {
+	const md = fs.readFileSync(path.join(scriptsDir, "../../Guitarchive.md"), "utf8");
+	return md.match(/```datacorejsx\n[\s\S]*?\n```/)?.[0] ?? "";
+})();
+
 for (const [label, block, file, exportName] of [
 	["SONG_HEADER_BLOCK", SONG_HEADER_BLOCK, "song-header-view.jsx", "SongHeader"],
 	["ARTIST_PAGE_BLOCK", ARTIST_PAGE_BLOCK, "artist-page-view.jsx", "ArtistPage"],
+	["Guitarchive.md stub", guitarchiveStub, "guitarchive-view.jsx", "Guitarchive"],
 ]) {
 	test(`${label} loader stub points at an existing component that exports ${exportName}`, () => {
 		const requiredPath = block.match(/dc\.require\(dc\.fileLink\("([^"]+)"\)\)/);

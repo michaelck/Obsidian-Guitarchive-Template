@@ -31,6 +31,13 @@
 const USER_AGENT = "ObsidianTabVaultEnricher/1.0 (personal vault script)";
 const ARTISTS_FOLDER = "Artists";
 
+// Artist photos are downloaded into their own folder, kept separate from song
+// cover art (Attachments/Covers). Same personal-archiving caveat as covers:
+// the images stay copyrighted (CC BY-SA etc.), so don't push this folder to a
+// public repo. Set DOWNLOAD_PHOTOS = false to store just the remote URL.
+const DOWNLOAD_PHOTOS = true;
+const PHOTOS_FOLDER = "Attachments/Photos";
+
 // Obsidian's requestUrl does HTTP natively, bypassing the webview's CORS and
 // mixed-content rules (needed on mobile); falls back to fetch elsewhere.
 const obsidianRequestUrl = (() => {
@@ -130,16 +137,150 @@ async function wikipediaSummary(title) {
 	return jsonFetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${slug}`);
 }
 
-// Replaces an existing "## Bio" section, or inserts one above "## Notes"
-// (falling back to appending at the end). Must stay synchronous — it runs
-// inside app.vault.process().
-function upsertBioSection(content, bioSection) {
-	const existing = /## Bio\n[\s\S]*?(?=\n## |\s*$)/;
-	if (existing.test(content)) return content.replace(existing, bioSection.trimEnd() + "\n");
+// Binary download (mirrors enrichSongNote's httpBinary — each script stays
+// self-contained). requestUrl on mobile, fetch elsewhere.
+async function binaryFetch(url) {
+	if (obsidianRequestUrl) {
+		const res = await obsidianRequestUrl({ url, headers: { "User-Agent": USER_AGENT }, throw: false });
+		if (res.status >= 400) throw new Error(`${res.status} from ${new URL(url).hostname}`);
+		return { data: res.arrayBuffer, contentType: res.headers?.["content-type"] ?? "" };
+	}
+	const res = await fetch(url, { headers: { "User-Agent": USER_AGENT } });
+	if (!res.ok) throw new Error(`${res.status} from ${new URL(url).hostname}`);
+	return { data: await res.arrayBuffer(), contentType: res.headers.get("content-type") ?? "" };
+}
 
-	const notesIdx = content.indexOf("## Notes");
-	if (notesIdx !== -1) return content.slice(0, notesIdx) + bioSection + "\n" + content.slice(notesIdx);
-	return content.trimEnd() + "\n\n" + bioSection;
+// Downloads an image into `folder` and returns its vault path. Extension from
+// Content-Type; filename sanitized. Overwrites on re-enrich. (Mirrors
+// enrichSongNote's downloadCover, generalized over the target folder.)
+async function downloadImage(url, baseName, folder) {
+	const { data, contentType } = await binaryFetch(url);
+	const ext = contentType.includes("png") ? "png" : contentType.includes("gif") ? "gif" : contentType.includes("webp") ? "webp" : "jpg";
+
+	// create the folder chain one level at a time (createFolder isn't recursive)
+	let parent = "";
+	for (const segment of folder.split("/")) {
+		parent = parent ? `${parent}/${segment}` : segment;
+		if (!app.vault.getAbstractFileByPath(parent)) {
+			await app.vault.createFolder(parent).catch(() => {});
+		}
+	}
+
+	const path = `${folder}/${baseName.replace(/[\\/:*?"<>|]/g, "-")}.${ext}`;
+	await app.vault.adapter.writeBinary(path, data);
+	return path;
+}
+
+// The Commons File name embedded in an upload.wikimedia.org URL, for both
+// full-size (…/commons/x/xx/Name.ext) and thumbnail
+// (…/commons/thumb/x/xx/Name.ext/NNNpx-Name.ext) forms.
+function commonsFileName(url) {
+	try {
+		const { pathname } = new URL(url);
+		const m = pathname.match(/\/commons\/(?:thumb\/)?[0-9a-f]\/[0-9a-f]{2}\/([^/]+)/);
+		return m ? decodeURIComponent(m[1]) : null;
+	} catch {
+		return null;
+	}
+}
+
+// Resolves the artist's lead image from a Wikipedia REST summary. The summary
+// already carries the image URL (originalimage/thumbnail), so no extra API
+// call is needed: a URL under /wikipedia/commons/ is Commons-hosted, which
+// makes its File description page a reliable attribution target (author +
+// license live there). Non-Commons (local-wiki) images are skipped rather than
+// mis-attributed. Returns { image, source } or null. The thumbnail is
+// preferred for storage (a page photo doesn't need the multi-megapixel
+// original); the File name is derived from whichever URL is Commons-hosted.
+async function resolveArtistPhoto(summary, baseName) {
+	const original = summary.originalimage?.source;
+	const thumb = summary.thumbnail?.source;
+	const commonsUrl = [original, thumb].find((u) => u && /\/wikipedia\/commons\//.test(u));
+	if (!commonsUrl) return null; // no image, or a non-Commons image
+
+	const fileName = commonsFileName(commonsUrl);
+	if (!fileName) return null;
+	const source = `https://commons.wikimedia.org/wiki/File:${encodeURIComponent(fileName)}`;
+
+	let image = thumb ?? original; // store the smaller rendition
+	if (DOWNLOAD_PHOTOS) {
+		try {
+			image = await downloadImage(image, baseName, PHOTOS_FOLDER);
+		} catch {
+			// download best-effort; fall back to the remote URL
+		}
+	}
+	return { image, source };
+}
+
+// Managed sections, in the order they should appear on the page. Everything
+// below the last of these (## Notes) is hand-written and untouched. The
+// discography is NOT a body section — it's a frontmatter list rendered by the
+// artist page block (so it can offer a live expand-to-your-songs toggle, the
+// same pattern as the song header's "more from this album").
+const SECTION_ORDER = ["## Bio", "## Notes"];
+
+// Replaces an existing `heading` section in place, or inserts it in the right
+// spot: before the first later section in SECTION_ORDER that's present (so Bio
+// lands above Notes regardless of write order), falling back to appending at
+// the end. Must stay synchronous — it runs inside app.vault.process().
+function upsertSection(content, heading, body) {
+	const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	const existing = new RegExp(`${escaped}\\n[\\s\\S]*?(?=\\n## |\\s*$)`);
+	if (existing.test(content)) return content.replace(existing, body.trimEnd() + "\n");
+
+	const idx = SECTION_ORDER.indexOf(heading);
+	const followers = idx === -1 ? ["## Notes"] : SECTION_ORDER.slice(idx + 1);
+	for (const follower of followers) {
+		const at = content.indexOf(follower);
+		if (at !== -1) return content.slice(0, at) + body.trimEnd() + "\n\n" + content.slice(at);
+	}
+	return content.trimEnd() + "\n\n" + body.trimEnd() + "\n";
+}
+
+// Bio is one such section; kept as a named wrapper for readability at the call
+// site (and the test suite).
+function upsertBioSection(content, bioSection) {
+	return upsertSection(content, "## Bio", bioSection);
+}
+
+// All of an artist's Album/EP release-groups from MusicBrainz, paginated. The
+// `type` browse filter narrows to primary-type Album/EP server-side; the
+// client-side primary-type check is a belt-and-suspenders guard in case the
+// filter is ignored.
+async function getArtistReleaseGroups(mbid) {
+	const groups = [];
+	const LIMIT = 100;
+	for (let offset = 0; offset < 1000; offset += LIMIT) {
+		const url = `https://musicbrainz.org/ws/2/release-group?artist=${mbid}&type=album|ep&fmt=json&limit=${LIMIT}&offset=${offset}`;
+		const data = await jsonFetch(url);
+		const batch = data["release-groups"] ?? [];
+		groups.push(...batch);
+		const total = data["release-group-count"] ?? groups.length;
+		if (batch.length === 0 || offset + LIMIT >= total) break;
+	}
+	return groups;
+}
+
+// Encodes an artist's Album/EP release-groups as compact "year|title|type|rgid"
+// strings for the `Discography` frontmatter list: primary-type Album/EP with
+// NO secondary types (drops compilations, live albums, remixes, bootlegs),
+// sorted by first-release-date. The artist page block parses these and, for
+// release-groups the vault has songs from (matched on `rgid` === a song's
+// `Album MBID`), renders a live expand-to-your-songs toggle. Pipes in titles
+// are swapped for "/" so they can't break the delimiter.
+function buildDiscographyList(groups) {
+	return (groups ?? [])
+		.filter((rg) => ["Album", "EP"].includes(rg["primary-type"]))
+		.filter((rg) => (rg["secondary-types"] ?? []).length === 0)
+		.map((rg) => ({
+			year: (rg["first-release-date"] ?? "").slice(0, 4),
+			title: String(rg.title ?? "").replace(/\|/g, "/"),
+			type: rg["primary-type"],
+			id: rg.id,
+		}))
+		.sort((a, b) => (a.year || "9999").localeCompare(b.year || "9999") || a.title.localeCompare(b.title))
+		.map((e) => `${e.year}|${e.title}|${e.type}|${e.id}`);
 }
 
 module.exports = async function enrichArtistPage(tp) {
@@ -192,16 +333,36 @@ module.exports = async function enrichArtistPage(tp) {
 		if (listen.length > 0) f.Listen = listen;
 	});
 
+	// Discography — MB Album/EP release-groups, stored as a frontmatter list
+	// the artist page block renders (with a live expand-to-your-songs toggle
+	// per owned album). Depends only on the MBID, not the Wikipedia chain
+	// below, so an artist with no article still gets one. Best-effort.
+	let savedDiscography = "";
+	try {
+		const discography = buildDiscographyList(await getArtistReleaseGroups(mbid));
+		if (discography.length > 0) {
+			await app.fileManager.processFrontMatter(file, (f) => {
+				f.Discography = discography;
+			});
+			savedDiscography = " + discography";
+		}
+	} catch {
+		// a discography failure shouldn't block the bio/photo below
+	}
+
+	// what's already been saved from MusicBrainz alone, for the notices on the
+	// Wikipedia-less exit paths below
+	const mbSaved = [listen.length > 0 ? `${listen.length} listen link(s)` : null, savedDiscography ? "discography" : null].filter(Boolean).join(" + ");
+
 	const title = await wikipediaTitle(details.relations);
 	if (!title) {
-		const saved = listen.length > 0 ? ` Saved ${listen.length} listen link(s).` : "";
-		new Notice(`MusicBrainz has no Wikipedia/Wikidata link for ${details.name ?? name}.${saved}`);
+		new Notice(`MusicBrainz has no Wikipedia/Wikidata link for ${details.name ?? name}.${mbSaved ? ` Saved ${mbSaved}.` : ""}`);
 		return;
 	}
 
 	const summary = await wikipediaSummary(title);
 	if (summary.type !== "standard" || !summary.extract) {
-		new Notice(`Wikipedia page "${title}" has no usable summary (${summary.type}).`);
+		new Notice(`Wikipedia page "${title}" has no usable summary (${summary.type}).${mbSaved ? ` Saved ${mbSaved}.` : ""}`);
 		return;
 	}
 
@@ -230,8 +391,22 @@ module.exports = async function enrichArtistPage(tp) {
 		if (summary.description) f.Description = summary.description;
 	});
 
+	// Artist photo from the Wikipedia lead image (Commons-hosted). Stored in
+	// Photo + a PhotoSource link to the Commons file page (author/license live
+	// there — same attribution discipline as song CoverSource). Best-effort:
+	// no lead image, or a non-Commons one, just means no photo gets written.
+	const photo = await resolveArtistPhoto(summary, name);
+	let savedPhoto = "";
+	if (photo) {
+		await app.fileManager.processFrontMatter(file, (f) => {
+			f.Photo = photo.image;
+			f.PhotoSource = photo.source;
+		});
+		savedPhoto = " + photo";
+	}
+
 	const savedLinks = listen.length > 0 ? ` + ${listen.length} listen link(s)` : "";
-	new Notice(`Enriched "${file.basename}": Wikipedia bio${savedLinks}.`);
+	new Notice(`Enriched "${file.basename}": Wikipedia bio${savedLinks}${savedDiscography}${savedPhoto}.`);
 };
 
 // Exposed for the offline test suite (tools/tests/) — inert inside Obsidian.
@@ -239,5 +414,10 @@ module.exports.__test__ = {
 	mbSearchArtists,
 	wikipediaTitle,
 	upsertBioSection,
+	upsertSection,
 	artistListenLinks,
+	commonsFileName,
+	resolveArtistPhoto,
+	getArtistReleaseGroups,
+	buildDiscographyList,
 };

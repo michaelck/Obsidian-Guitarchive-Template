@@ -14,7 +14,9 @@ tab & chord archive — a personal songbook that organizes itself.
 - **Artist pages** that build themselves: every artist gets a page with
   song/album/favorite counts and a live table of their songs — created
   automatically when you enrich a song, with one-hotkey enrichment of
-  their own: streaming links, a Wikipedia bio, and a one-line descriptor.
+  their own: streaming links, a Wikipedia bio and one-line descriptor, the
+  artist's photo, and a discography of their albums and EPs that flags the
+  ones you already have songs from.
 - **Key detection**: a "♪ Detect key from chords" link in the song header
   analyzes your chord sheet and writes the key to frontmatter (with the
   sounding key shown when a capo is set).
