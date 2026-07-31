@@ -217,7 +217,7 @@ list item and needs `render: value => <>{value}</>` to bypass that.
 - User scripts live in the configured "Script files folder location" and export `module.exports = async function name(tp) { ... }`, invoked as `tp.user.name(tp)`.
 - There is no "Templater Command" toggle in some versions. The supported mechanism is **Template Hotkeys**: create a tiny template file containing `<%* await tp.user.enrichSongNote(tp) %>` and bind a hotkey to that file, not to the script directly.
 - When binding, use the **"Insert"** Templater command, not "Create" — Create generates a brand-new note using the file as a template rather than running it against the active note.
-- Folder Templates auto-apply to new notes created in a given folder, but require "Trigger Templater on new file creation" to be enabled first.
+- Folder Templates auto-apply to new notes created in a given folder, but require "Trigger Templater on new file creation" to be enabled first. **As of Templater ~2.24 this toggle is a per-device setting** stored in Obsidian's `localStorage` (`templater-local-settings`), not in the synced `data.json`, and is gated behind a risk-acknowledgment dialog — so it **cannot be pre-enabled by the shipped config** and every user must turn it on manually, once per machine. The shipped `data.json` (dev env + zip are now on 2.24.3, `data_version: 2`) carries `trigger_on_file_creation_mode: "folder"` + the `folder_templates` mapping, which are all that's needed once the user flips the device-local master toggle; only that on/off moved device-local. (Vaults last written by pre-2.24 Templater used the in-`data.json` booleans `trigger_on_file_creation`/`enable_folder_templates`; the 2.24 migration reads them once, sets the mode from `enable_folder_templates`, then drops both.)
 - **This repo ships `.obsidian/hotkeys.json`** binding Enrich Song
   `Mod+Shift+E`, Enrich Artist `Mod+Shift+A`, Adopt Song `Mod+Shift+M` —
   chosen to avoid all Obsidian defaults (`Mod+Shift+F/V/I` are taken; plain
@@ -811,15 +811,25 @@ the new file it *executes* the template block and replaces the file's content
 with its output, silently blanking it. This ate `Enrich Artist.md` and
 `Sync Artist Pages.md` on first creation. Safe paths: create the file empty
 and add content in a second write, or (re)write content into a file Obsidian
-already knows about — modifications don't re-trigger.
+already knows about — modifications don't re-trigger. **Templater ~2.24
+moved this trigger to a per-device `localStorage` setting behind a warning
+dialog** (`app.loadLocalStorage("templater-local-settings")`, default off) —
+so it can't be shipped in `data.json` at all, and new-note templating is dead
+out of the box until the user enables it manually. Symptom of the disabled trigger: a brand-new note in
+`Songs/` is **0 bytes** (the folder template never ran at all) rather than
+templated-but-with-an-empty-prompt. Not fixable in shipped config; fixed in the
+README/CLAUDE setup docs instead.
 
 ## Setup checklist (what the README walks users through)
 
 Install and enable the Datacore and Templater community plugins (the shipped
 `.obsidian` config pre-registers them; users install the binaries). Templater
-script folder is `Templates/Scripts`; "Trigger Templater on new file
-creation" is enabled so `Templates/New Song.md` fires for new notes in
-`Songs/`. Hotkeys ship pre-bound (see Templater notes above); rebinding must
+script folder is `Templates/Scripts`; the user must manually enable "Trigger
+Templater on new file creation" (Settings → Templater, accept the warning) so
+`Templates/New Song.md` fires for new notes in `Songs/` — on current Templater
+this is a per-device setting that can't ship pre-enabled (see Templater notes
+above), so the README setup step calls it out and it must be redone on each
+machine. Hotkeys ship pre-bound (see Templater notes above); rebinding must
 use the "Insert" Templater command, not "Create". The `song-note.css`
 snippet hides the native properties panel in reading mode on song notes
 (`.song-note`/`.artist-note`), opts `.wide-page` out of the

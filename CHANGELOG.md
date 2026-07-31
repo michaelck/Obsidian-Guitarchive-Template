@@ -5,6 +5,21 @@ collects notes for the next release; when the maintainer cuts a release,
 retitle the section with the version and paste it into the GitHub release
 description. Planned work lives in [ROADMAP.md](ROADMAP.md).
 
+## v1.3.1 — 2026-07-30
+
+### Changed
+- Setup now calls out a required manual step. On current Templater (2.24+),
+  **Trigger Templater on new file creation** is a per-device setting behind a
+  confirmation dialog, so the vault can no longer ship it pre-enabled — you
+  turn it on yourself after installing the plugins, once on each machine you
+  use the vault. Until it's on, creating a note in `Songs/` won't prompt for a
+  title or add the header block (the new note comes out blank). The README
+  setup steps now include this.
+- Requirements are clearer about what's optional: only **Templater** and
+  **Datacore** are required. **Chord Sheets** (recommended) and **Vextab** are
+  optional — Vextab's notation is the most involved to write and is fine to
+  skip for a chords-only vault.
+
 ## v1.3.0 — 2026-07-28
 
 ### Added

@@ -25,15 +25,15 @@ tab & chord archive — a personal songbook that organizes itself.
 
 ## Requirements
 
-Four community plugins (this vault ships with them pre-configured — you
-just need to install them):
+Two required community plugins, plus two optional ones (this vault ships with
+them pre-configured — you just install the ones you want):
 
-| Plugin | Purpose |
-|---|---|
-| [Templater](https://github.com/SilentVoid13/Templater) | new-song template + the enrichment scripts |
-| [Datacore](https://github.com/blacksmithgu/datacore) | the live index, headers, and artist tables |
-| [Chord Sheets](https://github.com/olvidalo/obsidian-chord-sheets) | chord highlighting in ` ```chords ` blocks (optional but recommended) |
-| [Vextab](https://obsidian.md/plugins?id=vextab) | melody lines: standard notation + tablature rendered from ` ```vextab ` blocks (optional — chords-only vaults can skip it) |
+| Plugin | Required? | Purpose |
+|---|---|---|
+| [Templater](https://github.com/SilentVoid13/Templater) | **Required** | new-song template + the enrichment scripts |
+| [Datacore](https://github.com/blacksmithgu/datacore) | **Required** | the live index, headers, and artist tables |
+| [Chord Sheets](https://github.com/olvidalo/obsidian-chord-sheets) | Optional (recommended) | chord highlighting in ` ```chords ` blocks |
+| [Vextab](https://obsidian.md/plugins?id=vextab) | Optional | melody lines: standard notation + tablature from ` ```vextab ` blocks — the most involved to write, and entirely skippable for a chords-only vault |
 
 Song and artist notes carry a `cssclasses` frontmatter property
 (`song-note` / `artist-note`, written automatically by the templates), which
@@ -50,7 +50,18 @@ properties panel.
 1. Clone this repo (or "Use this template" on GitHub, then clone yours).
 2. In Obsidian: **Open folder as vault** → pick the cloned folder → trust and
    enable community plugins, installing the four above.
-3. Hotkeys come pre-bound (none collide with Obsidian defaults):
+3. **Turn on the new-song template.** In **Settings → Templater**, enable
+   **Trigger Templater on new file creation** and accept the confirmation.
+   This is what makes the New Song template — the title prompt and the
+   frontmatter scaffold — run when you create a note in `Songs/`. Recent
+   Templater versions store this setting **per device** and put it behind a
+   warning, so it can't be bundled with the vault: enable it on every machine
+   where you use the vault. Leave the trigger mode on **Folder templates**.
+   (The warning is generic — with this on, any *new* note containing Templater
+   syntax runs on creation. That's fine for notes you write yourself; for tab
+   files you import from elsewhere, use **Adopt Song** rather than dropping
+   them straight into `Songs/`.)
+4. Hotkeys come pre-bound (none collide with Obsidian defaults):
 
    | Command | Key |
    |---|---|
@@ -63,10 +74,10 @@ properties panel.
    spawns a new note instead of running against the open one. *Sync Artist
    Pages* is left unbound: it runs automatically as part of Enrich Song, and
    the command palette covers the rare manual run.
-4. Optional but recommended: turn off **Inline title** in **Settings →
+5. Optional but recommended: turn off **Inline title** in **Settings →
    Appearance** — song and artist notes render their own title in the
    header block, so the filename title just shows twice.
-5. Open `Guitarchive.md` — it starts empty and fills in live as you add
+6. Open `Guitarchive.md` — it starts empty and fills in live as you add
    songs to `Songs/`.
 
 ## Workflow

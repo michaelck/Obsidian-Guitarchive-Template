@@ -1,17 +1,29 @@
 {
+  "data_version": 2,
+  "command_timeout": 5,
+  "templates_folder": "",
+  "templates_pairs": [],
+  "trigger_on_file_creation_mode": "folder",
+  "auto_jump_to_cursor": false,
+  "jump_to_cursor_after_file_name": false,
+  "shell_path": "",
   "user_scripts_folder": "Templates/Scripts",
-  "trigger_on_file_creation": true,
-  "enable_folder_templates": true,
   "folder_templates": [
     {
       "folder": "Songs",
       "template": "Templates/New Song.md"
     }
   ],
+  "file_templates": [],
+  "syntax_highlighting": true,
+  "syntax_highlighting_mobile": false,
   "enabled_templates_hotkeys": [
     "Templates/Scripts/Enrich Song.md",
     "Templates/Scripts/Enrich Artist.md",
     "Templates/Scripts/Sync Artist Pages.md",
     "Templates/Scripts/Adopt Song.md"
-  ]
+  ],
+  "startup_templates": [],
+  "intellisense_render": "1",
+  "ignore_folders_on_creation": []
 }
